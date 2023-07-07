@@ -8,6 +8,7 @@ guild_id = 811510380152356864
 announce_channel_id = 834171208903294996
 mailbox_channel_id = 842522206201970719
 staff_role = 842686615092199444
+bot_channel = 1124677768240705596
 
 harvest_cooldown = 20
 
@@ -16,9 +17,11 @@ hunt_chance = 50
 hunt_locations = ["in a bush", "near the river", "in a barn"]
 
 dupe_cooldown = 20
-dupe_chance = 65
+dupe_chance = 50
 
 dig_cooldown = 20
+explore_cooldown = 20
+explore_locations = ["in an old factory", "in an old barn", "int the city", "at the park"]
 
 # emojis
 eggy_emoji = "<:eggy:1121872437055869048>"
@@ -37,26 +40,36 @@ golden_shovel_emoji = "<:goldenshovel:1124048992511197244>"
 # farms
 level_1_farm_min = 0
 level_1_farm_max = 5
+level_1_explore_min = -5
+level_1_explore_max = 5
 
 level_2_unlock_cost = 500
 level_2_farm_min = 1
 level_2_farm_max = 7
+level_2_explore_min = -3
+level_2_explore_max = 8
 
 level_3_unlock_cost = 2000
 level_3_farm_min = 6
 level_3_farm_max = 12
+level_3_explore_min = -1
+level_3_explore_max = 10
 
 level_4_unlock_cost = 5000
 level_4_farm_min = 9
 level_4_farm_max = 15
 level_4_silver_chance = 10
 level_4_gold_chance = 1
+level_4_explore_min = 3
+level_4_explore_max = 12
 
 level_5_unlock_cost = 20000
 level_5_farm_min = 14
 level_5_farm_max = 20
 level_5_silver_chance = 25
 level_5_gold_chance = 10
+level_5_explore_min = 5
+level_5_explore_max = 15
 
 # inventory object names
 test_object_name = "test"

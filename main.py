@@ -1,17 +1,22 @@
 import os
-from keep_alive import keep_alive
-from api import Database
-from discord.ext import commands
-import settings
-import discord
-from datetime import date
 import random
 import time
+from datetime import date
+
+import discord
+from discord.ext import commands
+
+import settings
+from api import Database
+from keep_alive import keep_alive
 
 inte = discord.Intents.default()
 inte.messages = True
 inte.message_content = True
 inte.members = True
+
+false = False
+true = True
 
 bot = commands.Bot(
     command_prefix=settings.bot_prefix,  # Change to desired prefix
@@ -30,11 +35,36 @@ guild = None
 async def on_ready():  # When the bot is ready
     global guild
     guild = bot.get_guild(settings.guild_id)
-    await bot.change_presence(status=discord.Status.online)
+    c = guild.get_channel(settings.bot_channel)
+    emb = discord.Embed(
+        title="im back",
+        description="quess whos back. back again",
+        colour=discord.Color.green()
+    )
+    # await c.send(embed=emb)
     print("logged in as {0.user}".format(bot))
 
 
-# @bot.event
+@bot.event
+async def on_signal(signal):
+    if signal == "SIGINT":
+        print("Received SIGINT signal. Exiting gracefully...")
+        await send_farewell()
+
+
+async def send_farewell():
+    channel = guild.get_channel(settings.bot_channel)
+    emb = discord.Embed(
+        title="cya",
+        description="aight imma head out",
+        colour=discord.Color.red()
+    )
+
+    await channel.send(embed=emb)
+    await bot.close()
+
+
+@bot.event
 async def on_message(ctx):
     if not ctx.channel.id == 842522103315169320:
         await eggy_check(ctx, True)
@@ -92,8 +122,8 @@ async def help(ctx, page: int = 1):
 
 
 @bot.command("announce")
-@commands.has_role(842686615092199444)
-async def announce(ctx, *, args):
+@commands.has_role(settings.staff_role)
+async def announce(ctx, *, args):  
     achannel = bot.get_channel(settings.announce_channel_id)
     splits = args.split("|")
 
@@ -124,6 +154,7 @@ async def announce(ctx, *, args):
                    icon_url="https://cdn.discordapp.com/attachments/1121483496435753100/1121495423580901386/image0.gif")
 
     await achannel.send(embed=emb)
+    await ctx.channel.send(embed=emb)
 
 
 @announce.error
@@ -132,46 +163,83 @@ async def announce_error(ctx, error):
 
 
 @bot.command("basket", aliases=["eggs"])
-async def basket(ctx):
+async def basket(ctx, person: discord.Member = None):
+    if person is None:
+        person = ctx.author
     await eggy_check(ctx, False)
-    authorID = ctx.author.id
+    authorID = person.id
     u = database.get_user(authorID)
-    desc = "You currently have" + "\n<:eggy:1121872437055869048> {0} {1}".format(u.cash,
-                                                                                 settings.cash_name) + "\n<:silvereggy:1122255924669726800> {0} {1}".format(
-        u.ironcash, settings.iron_cash_name) + "\n<:goldeneggy:1121874261649399879> {0} {1}".format(u.goldcash,
-                                                                                                    settings.gold_cash_name) + "\n<:eggyolk:1121874358730772600> {0} {1}".format(
-        u.eggyolks, settings.yolk_cash_name)
+    desc = "You currently have" + "\n<:eggy:1121872437055869048> {0} {1}".format(int(u.cash), settings.cash_name) \
+           + "\n<:silvereggy:1122255924669726800> {0} {1}".format(int(u.ironcash), settings.iron_cash_name) \
+           + "\n<:goldeneggy:1121874261649399879> {0} {1}".format(int(u.goldcash), settings.gold_cash_name) \
+           + "\n<:eggyolk:1121874358730772600> {0} {1}".format(int(u.eggyolks), settings.yolk_cash_name)
     emb = discord.Embed(
         description=desc
     )
 
-    emb.set_author(name="{0}'s Egg Basket".format(ctx.author.name),
+    emb.set_author(name="{0}'s Egg Basket".format(person.name),
                    icon_url="https://cdn.discordapp.com/attachments/1121483496435753100/1121876394905981069/download__2_-removebg-preview.png")
 
     await ctx.channel.send(embed=emb)
+    return False
 
 
 @bot.command("transfer", aliases=["share"])
-async def transfer(ctx, target: discord.Member, amount: int):
+@commands.cooldown(1, 8, commands.BucketType.user)
+async def transfer(ctx, target: discord.Member, amount: int, what: str = "eggs"):
     await eggy_check(ctx, False)
     authorID = ctx.author.id
     targetID = target.id
-    if database.get_user(authorID).cash >= amount:
-        database.give_cash(authorID, -amount)
-        database.give_cash(targetID, amount)
-        emb = discord.Embed(
-            title="success",
-            description="successfully shared {3} {0} {1} with {2}".format(amount, settings.cash_name, target,
-                                                                          settings.eggy_emoji)
-        )
+    emb = discord.Embed(
+        title="if you see this something went wrong"
+    )
+    emb.set_author(name="Egg Basket",
+                   icon_url="https://cdn.discordapp.com/attachments/1121483496435753100/1121876394905981069/download__2_-removebg-preview.png")
+    emb.set_footer(text=str(date.today()))
+    if what == "eggs" or what == "egg" or what == "eggy" or what == "eggys":
+        if database.get_user(authorID).cash >= amount:
+            database.give_cash(authorID, -amount)
+            database.give_cash(targetID, amount)
+            emb = discord.Embed(
+                title="success",
+                description="successfully shared {3} {0} {1} with {2}".format(amount, settings.cash_name, target,
+                                                                              settings.eggy_emoji)
+            )
+        else:
+            emb = discord.Embed(
+                title="failed!",
+                description="you dont have enough eggs to share with {0}".format(target)
+            )
+    elif what == "silvereggs" or what == "silveregg" or what == "silvereggy" or what == "silvereggys":
+        if database.get_user(authorID).ironcash >= amount:
+            database.give_iron_cash(authorID, -amount)
+            database.give_iron_cash(targetID, amount)
+            emb = discord.Embed(
+                title="success",
+                description="successfully shared {3} {0} {1} with {2}".format(amount, settings.iron_cash_name, target,
+                                                                              settings.silver_eggy_emoji)
+            )
+        else:
+            emb = discord.Embed(
+                title="failed!",
+                description="you dont have enough silver eggs to share with {0}".format(target)
+            )
+    elif what == "goldeneggs" or what == "goldenegg" or what == "goldeneggy" or what == "goldeneggys":
+        if database.get_user(authorID).goldcash >= amount:
+            database.give_gold_cash(authorID, -amount)
+            database.give_gold_cash(targetID, amount)
+            emb = discord.Embed(
+                title="success",
+                description="successfully shared {3} {0} {1} with {2}".format(amount, settings.gold_cash_name, target,
+                                                                              settings.golden_eggy_emoji)
+            )
+        else:
+            emb = discord.Embed(
+                title="failed!",
+                description="you dont have enough golden eggs to share with {0}".format(target)
+            )
 
-        emb.set_author(name="Egg Basket",
-                       icon_url="https://cdn.discordapp.com/attachments/1121483496435753100/1121876394905981069/download__2_-removebg-preview.png")
-        emb.set_footer(text=str(date.today()))
-
-        await ctx.channel.send(embed=emb)
-    else:
-        await ctx.channel.send("you dont have enough {0} to share with @{1}".format(settings.cash_name, targetID))
+    await ctx.channel.send(embed=emb)
 
 
 @transfer.error
@@ -248,7 +316,7 @@ async def shop(ctx, store: str = "list"):
 
         if not database.has_inventory(authorID, "binoculars"):
             bin_desc = "{2}**Binoculars**: {0} {1}\nFind1.5x as much eggs when hunting".format(settings.binocular_cost,
-                                                                                               settings.eggy_emoji,
+                                                                                               settings.silver_eggy_emoji,
                                                                                                settings.binoculars_emoji)
         else:
             bin_desc = "{2}**Binoculars** (**owned**): {0} {1}\nFind 1.5x as much eggs when hunting".format(
@@ -377,11 +445,11 @@ async def buy(ctx, *, item):
     elif item == "binoculars":
         cost = settings.binocular_cost
         if database.get_user(authorID).ironcash >= cost:
-            database.give_cash(authorID, -cost)
+            database.give_iron_cash(authorID, -cost)
             database.give_inv_item(authorID, 1, "binoculars")
             await ctx.channel.send(
                 "successfully purchased the binoculars for {2} {0} {1}".format(cost, settings.cash_name,
-                                                                               settings.eggy_emoji))
+                                                                               settings.silver_eggy_emoji))
         else:
             await ctx.channel.send("you don't have enough silver eggs to purchase this")
     elif item == "luckydrumstick" or item == "lucky drumstick" or item == "lucky_drumstick":
@@ -441,7 +509,7 @@ async def buy(ctx, *, item):
     elif item == "egg statue" or item == "eggy statue" or item == "egg_statue" or item == "eggy_stateu" or item == "eggcellent statue" or item == "eggcellent_statue":
         cost = settings.egg_statue_cost
         if database.get_user(authorID).goldcash >= cost:
-            database.give_iron_cash(authorID, -cost)
+            database.give_gold_cash(authorID, -cost)
             database.give_inv_item(authorID, 1, "eggcellent statue")
             await ctx.channel.send(
                 "successfully purchased a eggcellent statue for {2} {0} {1}".format(cost, settings.gold_cash_name,
@@ -461,13 +529,23 @@ async def buy(ctx, *, item):
     elif item == "shovel" or item == "delicate shovel" or item == "delicate_shovel":
         cost = settings.delicate_shovel_cost
         if database.get_user(authorID).cash >= cost:
-            database.give_iron_cash(authorID, -cost)
+            database.give_cash(authorID, -cost)
             database.give_inv_item(authorID, 1, "delicate shovel")
             await ctx.channel.send(
                 "successfully purchased the delicate shovel for {2} {0} {1}".format(cost, settings.cash_name,
-                                                                                    settings.golden_eggy_emoji))
+                                                                                    settings.eggy_emoji))
         else:
             await ctx.channel.send("you don't have enough eggs to purchase this")
+    elif item == "gshovel" or item == "golden shovel" or item == "golden_shovel":
+        cost = settings.golden_shovel_cost
+        if database.get_user(authorID).goldcash >= cost:
+            database.give_gold_cash(authorID, -cost)
+            database.give_inv_item(authorID, 1, "golden shovel")
+            await ctx.channel.send(
+                "successfully purchased the golden shovel for {2} {0} {1}".format(cost, settings.gold_cash_name,
+                                                                                  settings.golden_eggy_emoji))
+        else:
+            await ctx.channel.send("you don't have enough golden eggs to purchase this")
     else:
         await ctx.channel.send("invalid item")
 
@@ -478,15 +556,15 @@ async def buy_error(ctx, error):
 
 
 @bot.command("pay", aliases=["give"])
-@commands.has_role(842686615092199444)
+@commands.has_role(settings.staff_role)
 async def pay(ctx, target: discord.Member, amount: int, what):
     targetID = target.id
     if what == "egg" or what == "eggs":
         database.give_cash(targetID, amount)
         emb = discord.Embed(
             title="success",
-            description="successfully payed {3} {0} {1} to {2}".format(amount, settings.cash_name, target,
-                                                                       settings.eggy_emoji)
+            description="successfully paid {3} {0} {1} to {2}".format(amount, settings.cash_name, target,
+                                                                      settings.eggy_emoji)
         )
 
         emb.set_author(name="Egg Basket",
@@ -552,19 +630,21 @@ async def pay_error(ctx, error):
 
 
 @bot.command("inventory", aliases=["inv", "wares"])
-async def inventory(ctx):
-    authorID = ctx.author.id
+async def inventory(ctx, person: discord.Member = None):
+    if person == None:
+        person = ctx.author
+    authorID = person.id
     u = database.get_user(authorID)
     if len(u.inventory) == 0:
         emb = discord.Embed(
-            title="{0}'s warehouse".format(ctx.author.name),
+            title="{0}'s warehouse".format(person.name),
             description="your inventory is currently empty!"
         )
 
         await ctx.channel.send(embed=emb)
     else:
         emb = discord.Embed(
-            title="{0}'s warehouse".format(ctx.author.name)
+            title="{0}'s warehouse".format(person.name)
         )
         test = 0  # done
         statue = 0  # not done
@@ -582,6 +662,9 @@ async def inventory(ctx):
                 custom_role += 1
             elif invobj == "custom channel":
                 custom_channel += 1
+
+        if authorID == 802159357306470430:
+            emb.add_field(name="unlucky", value="you are just very unlucky")
 
         if database.has_inventory(authorID, "dev crown"):
             emb.add_field(name=":crown: Dev Crown", value="A crown only the developer can give", inline=True)
@@ -630,7 +713,10 @@ async def profile(ctx):
                         "{2} {0} {1}".format(u.eggyolks, settings.yolk_cash_name, settings.eggyolk_emoji),
                   inline=False)
 
-    emb.set_author(name="{0}'s profile".format(ctx.author.name), url=None, icon_url=ctx.author.avatar)
+    if ctx.author.id == bot.author_id:
+        emb.set_author(name="god's profile", url=None, icon_url=ctx.author.avatar)
+    else:
+        emb.set_author(name="{0}'s profile".format(ctx.author.name), url=None, icon_url=ctx.author.avatar)
 
     await ctx.channel.send(embed=emb)
 
@@ -744,18 +830,21 @@ async def hunt_error(ctx, error):
 
 
 @bot.command("dupe", aliases=["duplicate"])
-async def dupe(ctx, amount):
+async def dupe(ctx, amount: str | int = 1):
     await eggy_check(ctx, False)
+    max_eggs = 25 + (25 * database.get_user(ctx.author.id).farm_level)
     if amount == "all" or amount == "max":
         amount = database.get_user(ctx.author.id).cash
+        if amount > max_eggs:
+            amount = max_eggs
     else:
         try:
             amount = int(amount)
         except ValueError:
             await ctx.channel.send("invalid arguments! {0}dupe (amount)".format(settings.bot_prefix))
             return
-    if amount > 50:
-        await ctx.channel.send("you cant duplicate so many eggs theres a max of 50")
+    if amount > max_eggs:
+        await ctx.channel.send("you cant duplicate so many eggs theres a max of {0}".format(max_eggs))
         return
     authorID = ctx.author.id
     amount = int(amount)
@@ -772,6 +861,7 @@ async def dupe(ctx, amount):
 
 
 @bot.command("crack")
+@commands.cooldown(1,2,commands.BucketType.user)
 async def crack(ctx):
     authorID = ctx.author.id
     if database.has_inventory(authorID, "egg topper"):
@@ -822,6 +912,85 @@ async def dig(ctx):
         await ctx.channel.send("you dont own a shovel")
 
 
+@bot.command("explore")
+@commands.cooldown(1, settings.explore_cooldown, commands.BucketType.user)
+async def explore(ctx):
+    await eggy_check(ctx, False)
+    flevel = database.get_user(ctx.author.id).farm_level
+    rolled = 0
+    location = settings.explore_locations[random.randint(1, len(settings.explore_locations))]
+    if flevel == 1:
+        rolled = random.randint(settings.level_1_explore_min, settings.level_1_explore_max)
+    elif flevel == 2:
+        rolled = random.randint(settings.level_2_explore_min, settings.level_2_explore_max)
+    elif flevel == 3:
+        rolled = random.randint(settings.level_3_explore_min, settings.level_3_explore_max)
+    elif flevel == 4:
+        rolled = random.randint(settings.level_4_explore_min, settings.level_4_explore_max)
+    elif flevel == 5:
+        rolled = random.randint(settings.level_5_explore_min, settings.level_5_explore_max)
+
+    database.give_cash(ctx.author.id, rolled)
+
+    if rolled <= -1:
+        emb = discord.Embed(
+            title="oops",
+            description="oops you dropped {0} eggs while exploring".format((-rolled))
+        )
+    elif rolled == 0:
+        emb = discord.Embed(
+            title="tough luck",
+            description="you didn't find any eggs"
+        )
+    else:
+        emb = discord.Embed(
+            title="success",
+            description="you found {0} eggs {1}".format(rolled, location)
+        )
+
+    await ctx.channel.send(embed=emb)
+
+
+@explore.error
+async def explore_error(ctx, error):
+    await error_handling(ctx, error, "explore")
+
+
+@bot.command("bargain")
+@commands.cooldown(1,10,commands.BucketType.user)
+async def bargain(ctx, amount: int):
+    await eggy_check(ctx, False)
+    rolled = random.randint(1, 2)
+    authorID = ctx.author.id
+
+    flevel = database.get_user(authorID).farm_level
+
+    eggs_min = amount - (5 - (2 * (flevel - 1)))
+    eggs_max = amount + (5 - (2 * (flevel - 1)))
+
+    if database.get_user(authorID).cash < amount:
+        await ctx.channel.send(embed=create_embed("nothing", "you don't have enough eggs to bargain"))
+        return
+  
+    if rolled == 1:
+        await ctx.channel.send(embed=create_embed("nothing", "you didn't manage to bargain for your eggs"))
+    elif rolled == 2:
+        profit = random.randint(eggs_min, eggs_max)
+        if profit == amount:
+            await ctx.channel.send(embed=create_embed("nothing", "you didn't manage to bargain for your eggs"))
+        elif profit > amount:
+            await ctx.channel.send(embed=create_embed("profit", "you bargained your {0} eggs for {1} eggs (you got {2} eggs)".format(amount, profit, profit)))
+            database.give_cash(authorID, (profit - amount))
+        elif profit < amount:
+            await ctx.channel.send(embed=create_embed("profit", "you bargained your {0} eggs for {1} eggs (you lost {2} eggs)".format(amount, profit, (amount-profit))))
+            database.give_cash(authorID, (amount - profit))
+            
+
+@bargain.error
+async def bargain_error(ctx, error):
+    await error_handling(ctx, error, "bargain")
+
+
 async def error_handling(ctx, error, command):
     if isinstance(error, commands.MissingPermissions) or isinstance(error, commands.MissingRole):
         await ctx.channel.send("https://tenor.com/view/no-nope-non-rick-rick-and-morty-gif-20999440")
@@ -835,7 +1004,9 @@ async def error_handling(ctx, error, command):
         elif command == "buy":
             await ctx.channel.send("missing required argument! {0}buy (item)".format(settings.bot_prefix))
         elif command == "pay":
-            await ctx.channel.send("missing required argument! {0}pay (target) (amoun)".format(settings.bot_prefix))
+            await ctx.channel.send("missing required argument! {0}pay (target) (amounr)".format(settings.bot_prefix))
+        elif command == "bargain":
+            await ctx.channel.send("missing required argument! {0}bargain (amount)".format(settings.bot_prefix))
     elif isinstance(error, commands.ConversionError):
         if command == "transfer":
             await ctx.channel.send("invalid arguments! {0}share (target) (amount)".format(settings.bot_prefix))
@@ -843,6 +1014,8 @@ async def error_handling(ctx, error, command):
             await ctx.channel.send("invalid arguments! {0}pay (target) (amount)".format(settings.bot_prefix))
         elif command == "dupe":
             await ctx.channel.send("invalid arguments! {0}dupe (amount)".format(settings.bot_prefix))
+        elif command == "bargain":
+            await ctx.channel.send("invalid arguments! {0}bargain (amount)".format(settings.bot_prefix))
     elif isinstance(error, commands.CommandOnCooldown):
         if command == "harvest":
             await ctx.channel.send(
@@ -853,8 +1026,10 @@ async def error_handling(ctx, error, command):
         elif command == "dupe":
             await ctx.channel.send(
                 f"the machine is still charging it should be done in {error.retry_after:.0f} seconds.")
-        elif command == "dig":
+        elif command == "dig" or command == "explore":
             await ctx.channel.send(f"you are still resting you can go again in {error.retry_after:.0f} seconds.")
+        elif command == "bargain":
+            await ctx.channel.send(f"you just went bargaining you can go again in {error.retry_after:.0f} seconds.")
 
 
 async def eggy_check(ctx, chatted: bool):
@@ -916,7 +1091,13 @@ async def test_emojis_error(ctx, error):
         await ctx.channel.send("https://tenor.com/view/no-nope-non-rick-rick-and-morty-gif-20999440")
 
 
-# keep_alive()  # Starts a webserver to be pinged.
-token = ""
+def create_embed(title: str, description: str = "") -> discord.Embed:
+    return discord.Embed(
+        title=title, description=description
+    )
+
+
+keep_alive()  # Starts a webserver to be pinged.
+token = os.getenv("TOKEN")
 
 bot.run(token)  # Starts the bot
