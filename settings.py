@@ -21,7 +21,7 @@ dupe_chance = 50
 
 dig_cooldown = 20
 explore_cooldown = 20
-explore_locations = ["in an old factory", "in an old barn", "int the city", "at the park"]
+explore_locations = ["in an old factory", "in an old barn", "in the city", "at the park"]
 
 # emojis
 eggy_emoji = "<:eggy:1121872437055869048>"
@@ -36,24 +36,28 @@ binoculars_emoji = "<:binoculars:1124027615972425901>"
 farm_emoji = "<:farm:1124027661694533723>"
 eggy_statue_emoji = "<:eggystatue:1124040541236113539>"
 golden_shovel_emoji = "<:goldenshovel:1124048992511197244>"
+jackpot_emoji = "<:jackpot:1126842458651758623>"
 
 # farms
 level_1_farm_min = 0
 level_1_farm_max = 5
 level_1_explore_min = -5
 level_1_explore_max = 5
+level_1_bargain_max = 100
 
 level_2_unlock_cost = 500
 level_2_farm_min = 1
 level_2_farm_max = 7
 level_2_explore_min = -3
 level_2_explore_max = 8
+level_2_bargain_max = 150
 
 level_3_unlock_cost = 2000
 level_3_farm_min = 6
 level_3_farm_max = 12
 level_3_explore_min = -1
 level_3_explore_max = 10
+level_3_bargain_max = 200
 
 level_4_unlock_cost = 5000
 level_4_farm_min = 9
@@ -62,6 +66,7 @@ level_4_silver_chance = 10
 level_4_gold_chance = 1
 level_4_explore_min = 3
 level_4_explore_max = 12
+level_4_bargain_max = 250
 
 level_5_unlock_cost = 20000
 level_5_farm_min = 14
@@ -70,9 +75,20 @@ level_5_silver_chance = 25
 level_5_gold_chance = 10
 level_5_explore_min = 5
 level_5_explore_max = 15
+level_5_bargain_max = 300
 
-# inventory object names
-test_object_name = "test"
+object_ids = {
+    "binoculars": 5,
+    "lucky drumstick": 6,
+    "golden chicken": 4,
+    "eggcellent statue": 7,
+    "delicate shovel": 2,
+    "egg topper": 1,
+    "golden shovel": 8,
+    "jackpot": 3,
+    "custom role": 501,
+    "custom channel": 502
+}
 
 # eco
 binocular_cost = 50  # silver
@@ -82,6 +98,7 @@ egg_statue_cost = 10  # gold
 delicate_shovel_cost = 100  # egg
 egg_toper_cost = 5  # egg
 golden_shovel_cost = 20  # gold
+jackpot_cost = 20  # silver
 
 # serv
 custom_role_cost = 100

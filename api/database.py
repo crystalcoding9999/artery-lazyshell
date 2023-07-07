@@ -1,106 +1,338 @@
-import json
-import os
-from api.user import User, from_String
-from settings import default_cash
+import sqlite3
+import settings
 
 
-class Database():
-    def __init__(self) -> None:
-        if not os.path.exists("./database"):
-            os.mkdir("./database")
-        else:
-            pass
+class Database:
+    def __init__(self):
+        db = sqlite3.connect(f"main.sqlite")
+        cursor = db.cursor()
+        self.file_name = "main"
+        cursor.execute(f'''CREATE TABLE IF NOT EXISTS main (
+            id INTEGER, cash INTEGER, farm_level INTEGER, ironcash INTEGER, goldcash INTEGER, eggyolks INTEGER
+        )''')
 
-    def add_user(self, user: User):
-        if os.path.exists("./database"):
-            with open(f"./database/{user.id}.json", "w") as f:
-                json.dump(user, f, cls=CustomEncoder)
+        cursor.execute(f'''CREATE TABLE IF NOT EXISTS inventory ( id INTEGER, binoculars INTEGER, lucky_drumstick 
+        INTEGER, golden_chicken INTEGER, eggcellent_statue INTEGER, delicate_shovel INTEGER, egg_topper INTEGER, 
+        golden_shovel INTEGER, jackpot INTEGER, custom_role INTEGER, custom_channel INTEGER )''')
 
-            pass
+        print("created database")
 
-    def get_user(self, id: int) -> User:
+    def add_user(self, id:int):
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+        cursor.execute(f"SELECT id FROM {self.file_name} WHERE id = {id}")
+        result = cursor.fetchone()
+        cursor.execute(f"SELECT id FROM inventory WHERE id = {id}")
+        result2 = cursor.fetchone()
+        if result is None:
+            sql_1 = ("INSERT INTO main(id, cash, farm_level, ironcash, goldcash, eggyolks) VALUES (?, ?, ?, ?, ?, ?)")
+            val_1 = (id, settings.default_cash, 1, 0, 0, 0)
+            cursor.execute(sql_1, val_1)
+        if result2 is None:
+            sql_2 = ("INSERT INTO inventory(id, binoculars, lucky_drumstick, golden_chicken, eggcellent_statue, " +
+                     "delicate_shovel, egg_topper, golden_shovel, jackpot, custom_role, custom_channel) VALUES (?, ?, " +
+                     "?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            val_2 = (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            cursor.execute(sql_2, val_2)
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def get_cash(self, id:int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT cash FROM {self.file_name} WHERE id = {id}")
+        bal = cursor.fetchone()
         try:
-            if os.path.exists("./database"):
-                if os.path.exists("./database/{0}.json".format(id)):
-                    with open("./database/{0}.json".format(id), "r") as file:
-                        return from_String(file.read())
-        except Exception as e:
-            print(e)
-            return self.get_user(id)
-      
-        u = User(id, default_cash, 1, 0, 0, 0, [])
+            cash = bal[0]
+        except:
+            cash = 0
 
-        self.add_user(u)
+        return cash
 
-        return u
+    def give_cash(self, id:int, amount:int):
+        self.add_user(id)
 
-    def remove_user(self, id: int):
-        if os.path.exists("./database"):
-            if os.path.exists(f"./database/{id}.json"):
-                os.remove(f"./database/{id}.json")
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
 
-    def give_cash(self, id: int, amount: int):
-        u = self.get_user(id)
-        self.remove_user(id)
-        u.cash += amount
-        print("gave {0} {1} cash they now have {2}".format(id, amount, u.id))
-        self.add_user(u)
+        cursor.execute(f"SELECT cash FROM {self.file_name} WHERE id = {id}")
+        cash = cursor.fetchone()
 
-    def give_level(self, id: int, amount: int):
-        u = self.get_user(id)
-        self.remove_user(id)
-        u.farm_level += amount
-        print("gave {0} {1} level they now have {2}".format(id, amount, u.farm_level))
-        self.add_user(u)
+        try:
+            cash = cash[0]
+        except:
+            cash = 0
+
+        sql = (f"UPDATE {self.file_name} SET cash = ? WHERE id = ?")
+        val = (cash + amount, id)
+        cursor.execute(sql, val)
+
+        print(f"gave {amount} eggs to {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def get_iron_cash(self, id: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT ironcash FROM {self.file_name} WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
 
     def give_iron_cash(self, id: int, amount: int):
-        u = self.get_user(id)
-        self.remove_user(id)
-        u.ironcash += amount
-        print("gave {0} {1} iron cash they now have {2}".format(id, amount, u.ironcash))
-        self.add_user(u)
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT ironcash FROM {self.file_name} WHERE id = {id}")
+        cash = cursor.fetchone()
+
+        try:
+            cash = cash[0]
+        except:
+            cash = 0
+
+        sql = (f"UPDATE {self.file_name} silver eggs SET ironcash = ? WHERE id = ?")
+        val = (cash + amount, id)
+        cursor.execute(sql, val)
+
+        print(f"gave {amount} iron eggs to {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def get_gold_cash(self, id: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT goldcash FROM {self.file_name} WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
 
     def give_gold_cash(self, id: int, amount: int):
-        u = self.get_user(id)
-        self.remove_user(id)
-        u.goldcash += amount
-        print("gave {0} {1} gold cash they now have {2}".format(id, amount, u.goldcash))
-        self.add_user(u)
+        self.add_user(id)
 
-    def give_yolk_cash(self, id: int, amount: int):
-        u = self.get_user(id)
-        self.remove_user(id)
-        u.eggyolks += amount
-        print("gave {0} {1} yolk cash they now have {2}".format(id, amount, u.eggyolks))
-        self.add_user(u)
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
 
-    def give_inv_item(self, id: int, amount: int, obj: str):
-        u = self.get_user(id)
-        self.remove_user(id)
-        i = 1
-        while i <= amount:
-            u.inventory.append(obj)
-            i += 1
-        print("gave {0} {1} {2}".format(id, amount, obj))
-        self.add_user(u)
+        cursor.execute(f"SELECT goldcash FROM {self.file_name} WHERE id = {id}")
+        cash = cursor.fetchone()
 
-    def remove_inv_item(self, id: int, amount: int, obj: str):
-        i = 1
-        while i >= amount:
-            if self.has_inventory(id, obj):
-                self.get_user(id).inventory.remove(obj)
-                i += 1
-            else:
-                break
+        try:
+            cash = cash[0]
+        except:
+            cash = 0
 
-        print("took {0} {1} {2}".format(id, amount, obj))
+        sql = (f"UPDATE {self.file_name} SET goldcash = ? WHERE id = ?")
+        val = (cash + amount, id)
+        cursor.execute(sql, val)
 
-    def has_inventory(self, id: int, object: str) -> bool:
-        return object in self.get_user(id).inventory
+        print(f"gave {amount} gold eggs to {id}")
 
+        db.commit()
+        cursor.close()
+        db.close()
 
-class CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, User):
-            return obj.__dict__  # Convert the object to a dictionary
-        return super().default(obj)
+    def get_eggyolks(self, id: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT eggyolks FROM {self.file_name} WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
+
+    def give_eggyolks(self, id: int, amount: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT eggyolks FROM {self.file_name} WHERE id = {id}")
+        cash = cursor.fetchone()
+
+        try:
+            cash = cash[0]
+        except:
+            cash = 0
+
+        sql = (f"UPDATE {self.file_name} SET eggyolks = ? WHERE id = ?")
+        val = (cash + amount, id)
+        cursor.execute(sql, val)
+
+        print(f"gave {amount} eggyolks to {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def get_farm_level(self, id: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT farm_level FROM {self.file_name} WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
+
+    def give_farm_level(self, id: int, amount: int):
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT farm_level FROM {self.file_name} WHERE id = {id}")
+        cash = cursor.fetchone()
+
+        try:
+            cash = cash[0]
+        except:
+            cash = 0
+
+        sql = (f"UPDATE {self.file_name} SET farm_level = ? WHERE id = ?")
+        val = (cash + amount, id)
+        cursor.execute(sql, val)
+
+        print(f"gave {amount} to {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def has_inventory_item(self, id: int, item: str) -> bool:
+        self.add_user(id)
+
+        item = item.replace(' ', '_')
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT {item} FROM inventory WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        if cash == 0:
+            return False
+        else:
+            return True
+
+    def get_inventory_amount(self, id: int, item: str) -> bool:
+        self.add_user(id)
+
+        item = item.replace(' ', '_')
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT {item} FROM inventory WHERE id = {id}")
+        bal = cursor.fetchone()
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
+
+    def give_inventory_item(self, id: int, item: str, amount: int):
+        self.add_user(id)
+
+        item = item.replace(' ', '_')
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT {item} FROM inventory WHERE id = {id}")
+        item_db = cursor.fetchone()
+
+        try:
+            item_db = item_db[0]
+        except:
+            item_db = 0
+
+        sql = (f"UPDATE inventory SET {item} = ? WHERE id = ?")
+        val = (item_db + amount, id)
+        cursor.execute(sql, val)
+
+        print(f"gave {amount} {item}s to {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def remove_inventory_item(self, id: int, item: str, amount: int):
+        self.add_user(id)
+
+        item = item.replace(' ', '_')
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT {item} FROM inventory WHERE id = {id}")
+        item_db = cursor.fetchone()
+
+        try:
+            item_db = item_db[0]
+        except:
+            item_db = 0
+
+        sql = (f"UPDATE inventory SET {item} = ? WHERE id = ?")
+        val = (item_db - amount, id)
+        cursor.execute(sql, val)
+
+        print(f"took {amount} {item}s from {id}")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+    def is_inventory_empty(self, id: int) -> bool:
+        self.add_user(id)
+
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"SELECT SUM(binoculars, lucky_drumstick, golden_chicken, eggcellent_statue, delicate_shovel, " +
+                       f"egg_topper, golden_shovel, jackpot, custom_role, custom_channel) " +
+                       f"FROM inventory WHERE id = {id}")
+        total_items = cursor.fetchone()[0]
+        total_items = total_items if total_items else 0
+
+        return total_items == 0

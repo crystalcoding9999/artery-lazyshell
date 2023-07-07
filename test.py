@@ -1,4 +1,7 @@
 import api
 
-test_user = api.User(0, 100,1,0,0,0, ["test"])
-print(str(None))
+test_database = api.Database()
+
+test_database.add_user(0)
+
+test_database.give_inventory_item(0, "binoculars", 1)
