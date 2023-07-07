@@ -35,13 +35,6 @@ guild = None
 async def on_ready():  # When the bot is ready
     global guild
     guild = bot.get_guild(settings.guild_id)
-    c = guild.get_channel(settings.bot_channel)
-    emb = discord.Embed(
-        title="im back",
-        description="quess whos back. back again",
-        colour=discord.Color.green()
-    )
-    # await c.send(embed=emb)
     print("logged in as {0.user}".format(bot))
 
 
@@ -1097,7 +1090,14 @@ def create_embed(title: str, description: str = "") -> discord.Embed:
     )
 
 
-keep_alive()  # Starts a webserver to be pinged.
-token = os.getenv("TOKEN")
+if os.path.exists("./token.txt"):
+    with open("./token.txt", "r") as f:
+        lines = f.readlines()
+        token = lines[0]
+        print("loaded token from token.txt")
+else:
+    token = os.getenv("TOKEN")
+    keep_alive()  # Starts a webserver to be pinged.
+    print("loaded token from os secrets")
 
 bot.run(token)  # Starts the bot
