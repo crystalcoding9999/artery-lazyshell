@@ -171,10 +171,14 @@ async def basket(ctx, person: discord.Member = None):
         person = ctx.author
     await eggy_check(ctx, False)
     authorID = person.id
-    desc = "You currently have" + "\n<:eggy:1121872437055869048> {0} {1}".format(int(database.get_cash(authorID)), settings.cash_name) \
-           + "\n<:silvereggy:1122255924669726800> {0} {1}".format(int(database.get_iron_cash(authorID)), settings.iron_cash_name) \
-           + "\n<:goldeneggy:1121874261649399879> {0} {1}".format(int(database.get_gold_cash(authorID)), settings.gold_cash_name) \
-           + "\n<:eggyolk:1121874358730772600> {0} {1}".format(int(database.get_eggyolks(authorID)), settings.yolk_cash_name)
+    desc = "You currently have" + "\n<:eggy:1121872437055869048> {0} {1}".format(int(database.get_cash(authorID)),
+                                                                                 settings.cash_name) \
+           + "\n<:silvereggy:1122255924669726800> {0} {1}".format(int(database.get_iron_cash(authorID)),
+                                                                  settings.iron_cash_name) \
+           + "\n<:goldeneggy:1121874261649399879> {0} {1}".format(int(database.get_gold_cash(authorID)),
+                                                                  settings.gold_cash_name) \
+           + "\n<:eggyolk:1121874358730772600> {0} {1}".format(int(database.get_eggyolks(authorID)),
+                                                               settings.yolk_cash_name)
     emb = discord.Embed(
         description=desc
     )
@@ -366,64 +370,111 @@ async def shop(ctx, store: str = "list"):
             fl_desc = "{0}**Farm Upgrade**:\nYou already have the max level farm!".format(settings.farm_emoji)
 
         if not database.has_inventory_item(authorID, "binoculars"):
-            bin_desc = "{2}**Binoculars**: {0} {1}\nFind1.5x as much eggs when hunting".format(settings.binocular_cost,
-                                                                                               settings.silver_eggy_emoji,
-                                                                                               settings.binoculars_emoji)
+            bin_desc = "{2}**Binoculars**: {0} {1}\n{3}".format(settings.binocular_cost,
+                                                                settings.silver_eggy_emoji,
+                                                                settings.binoculars_emoji,
+                                                                settings.object_descs["binoculars"])
         else:
-            bin_desc = "{2}**Binoculars** (**owned**): {0} {1}\nFind 1.5x as much eggs when hunting".format(
-                settings.binocular_cost, settings.silver_eggy_emoji, settings.binoculars_emoji)
+            bin_desc = "{2}**Binoculars** (**owned**): {0} {1}\n{3}".format(
+                settings.binocular_cost,
+                settings.silver_eggy_emoji,
+                settings.binoculars_emoji,
+                settings.object_descs["binoculars"])
 
         if not database.has_inventory_item(authorID, "lucky_drumstick"):
-            ld_desc = "{2}**Lucky Drumstick**: {1} {0}\nHigher chance to find silver eggs while chatting".format(
-                settings.silver_eggy_emoji, settings.lucky_drumstick_cost, settings.drumstick_emoji)
+            ld_desc = "{2}**Lucky Drumstick**: {1} {0}\n{3}".format(
+                settings.silver_eggy_emoji,
+                settings.lucky_drumstick_cost,
+                settings.drumstick_emoji,
+                settings.object_descs["lucky drumstick"])
         else:
-            ld_desc = "{2}**Lucky Drumstick** (**owned**): {1} {0}\nHigher chance to find silver eggs while chatting".format(
-                settings.silver_eggy_emoji, settings.lucky_drumstick_cost, settings.drumstick_emoji)
+            ld_desc = "{2}**Lucky Drumstick** (**owned**): {1} {0}\n{3}".format(
+                settings.silver_eggy_emoji,
+                settings.lucky_drumstick_cost,
+                settings.drumstick_emoji,
+                settings.object_descs["lucky drumstick"])
 
         if not database.has_inventory_item(authorID, "golden_chicken"):
-            gc_desc = "{2}**Golden Chicken**: {1} {0}\nincrease your harvest by 1.5x.".format(
+            gc_desc = "{2}**Golden Chicken**: {1} {0}\n{3}".format(
                 settings.silver_eggy_emoji,
-                settings.golden_chicken_cost, settings.chicken_emoji)
+                settings.golden_chicken_cost,
+                settings.chicken_emoji,
+                settings.object_descs["golden chicken"])
         else:
-            gc_desc = "{2}**Golden Chicken** (**owned**): {1} {0}\nincrease your harvest by 1.5x.".format(
-                settings.silver_eggy_emoji, settings.golden_chicken_cost, settings.chicken_emoji)
+            gc_desc = "{2}**Golden Chicken** (**owned**): {1} {0}\n{3}".format(
+                settings.silver_eggy_emoji,
+                settings.golden_chicken_cost,
+                settings.chicken_emoji,
+                settings.object_descs["golden chicken"])
 
         if not database.has_inventory_item(authorID, "eggcellent_statue"):
-            es_desc = "{2}**Eggcellent Statue**: {1} {0}\nA statue to signify your devotion to egg".format(
-                settings.golden_eggy_emoji, settings.egg_statue_cost, settings.eggy_statue_emoji)
+            es_desc = "{2}**Eggcellent Statue**: {1} {0}\n{3}".format(
+                settings.golden_eggy_emoji,
+                settings.egg_statue_cost,
+                settings.eggy_statue_emoji,
+                settings.object_descs["eggcellent statue"])
         else:
             count = database.get_inventory_amount(authorID, "eggcellent_statue")
-            es_desc = "{3}**Eggcellent Statue** (**{2} owned**): {1} {0}\nA statue to signify your devotion to egg".format(
-                settings.golden_eggy_emoji, settings.egg_statue_cost, count, settings.eggy_statue_emoji)
+            es_desc = "{3}**Eggcellent Statue** (**{2} owned**): {1} {0}\n{3}".format(
+                settings.golden_eggy_emoji,
+                settings.egg_statue_cost,
+                count,
+                settings.eggy_statue_emoji,
+                settings.object_descs["eggcellent statue"])
 
         if not database.has_inventory_item(authorID, "delicate_shovel"):
-            ds_desc = "{2}**Delicate Shovel**: {1} {0}\nCan be used to dig out lost eggs from the soil".format(
-                settings.eggy_emoji, settings.delicate_shovel_cost, settings.shovel_emoji)
+            ds_desc = "{2}**Delicate Shovel**: {1} {0}\n{3}".format(
+                settings.eggy_emoji,
+                settings.delicate_shovel_cost,
+                settings.shovel_emoji,
+                settings.object_descs["delicate shovel"])
         else:
-            ds_desc = "{2}**Delicate Shovel** (**owned**): {1} {0}\nCan be used to dig out lost eggs from the soil".format(
-                settings.eggy_emoji, settings.delicate_shovel_cost, settings.shovel_emoji)
+            ds_desc = "{2}**Delicate Shovel** (**owned**): {1} {0}\n{3}".format(
+                settings.eggy_emoji,
+                settings.delicate_shovel_cost,
+                settings.shovel_emoji,
+                settings.object_descs["delicate shovel"])
 
         if not database.has_inventory_item(authorID, "egg_topper"):
-            et_desc = "{2}**Egg Topper**: {1} {0}\nCan be used to make an egg into egg yolk".format(
-                settings.eggy_emoji, settings.egg_toper_cost, settings.topper_emoji)
+            et_desc = "{2}**Egg Topper**: {1} {0}\n{3}".format(
+                settings.eggy_emoji,
+                settings.egg_toper_cost,
+                settings.topper_emoji,
+                settings.object_descs["egg topper"])
         else:
             count = database.get_inventory_amount(authorID, "egg topper")
-            et_desc = "{3}**Egg Topper** (**{2} owned**): {1} {0}\nCan be used to make an egg into egg yolk".format(
-                settings.eggy_emoji, settings.egg_toper_cost, count, settings.topper_emoji)
+            et_desc = "{3}**Egg Topper** (**{2} owned**): {1} {0}\n{3}".format(
+                settings.eggy_emoji,
+                settings.egg_toper_cost,
+                count,
+                settings.topper_emoji,
+                settings.object_descs["egg topper"])
 
         if not database.has_inventory_item(authorID, "golden_shovel"):
-            gs_desc = "{2}**Golden Shovel**: {1} {0}\nDoes the work of a shovel but 1.5x better!".format(
-                settings.golden_eggy_emoji, settings.golden_shovel_cost, settings.golden_shovel_emoji)
+            gs_desc = "{2}**Golden Shovel**: {1} {0}\n{3}".format(
+                settings.golden_eggy_emoji,
+                settings.golden_shovel_cost,
+                settings.golden_shovel_emoji,
+                settings.object_descs["golden shovel"])
         else:
-            gs_desc = "{2}**Golden Shovel** (**owned**): {1} {0}\nDoes the work of a shovel but 1.5x better!".format(
-                settings.golden_eggy_emoji, settings.golden_shovel_cost, settings.golden_shovel_emoji)
+            gs_desc = "{2}**Golden Shovel** (**owned**): {1} {0}\n{3}".format(
+                settings.golden_eggy_emoji,
+                settings.golden_shovel_cost,
+                settings.golden_shovel_emoji,
+                settings.object_descs["golden shovel"])
 
         if not database.has_inventory_item(authorID, "jackpot"):
-            jp_desc = "{2}**Jackpot**: {1} {0}\nIncrease bargain and dupe profit by 1.5x" \
-                .format(settings.silver_eggy_emoji, settings.jackpot_cost, settings.jackpot_emoji)
+            jp_desc = "{2}**Jackpot**: {1} {0}\n{3}" \
+                .format(settings.silver_eggy_emoji,
+                        settings.jackpot_cost,
+                        settings.jackpot_emoji,
+                        settings.object_descs["jackpot"])
         else:
-            jp_desc = "{2}**Jackpot** (**owned**): {1} {0}\nIncrease bargain and dupe profit by 1.5x" \
-                .format(settings.silver_eggy_emoji, settings.jackpot_cost, settings.jackpot_emoji)
+            jp_desc = "{2}**Jackpot** (**owned**): {1} {0}\n{3}" \
+                .format(settings.silver_eggy_emoji,
+                        settings.jackpot_cost,
+                        settings.jackpot_emoji,
+                        settings.object_descs["jackpot"])
 
         # emb.add_field(name="more coming soon", value="probably...", inline=False)
 
@@ -466,18 +517,26 @@ async def shop(ctx, store: str = "list"):
         )
 
         if not database.has_inventory_item(authorID, "custom_role"):
-            cr_desc = "**Custom Role**: {1} {0}\nA custom role with a colour and name of your choice".format(
-                settings.golden_eggy_emoji, settings.custom_role_cost)
+            cr_desc = "**Custom Role**: {1} {0}\n{2}".format(
+                settings.golden_eggy_emoji,
+                settings.custom_role_cost,
+                settings.object_descs["custom role"])
         else:
-            cr_desc = "**Custom Role** (**owned**): {1} {0}\nA custom role with a colour and name of your choice".format(
-                settings.golden_eggy_emoji, settings.custom_role_cost)
+            cr_desc = "**Custom Role** (**owned**): {1} {0}\n{2}".format(
+                settings.golden_eggy_emoji,
+                settings.custom_role_cost,
+                settings.object_descs["custom role"])
 
         if not database.has_inventory_item(authorID, "custom_channel"):
-            cc_desc = "**Custom Channel**: {1} {0}\nA custom channel that you can invite your friends to".format(
-                settings.golden_eggy_emoji, settings.custom_channel_cost)
+            cc_desc = "**Custom Channel**: {1} {0}\n{2}".format(
+                settings.golden_eggy_emoji,
+                settings.custom_channel_cost,
+                settings.object_descs["custom channel"])
         else:
-            cc_desc = "**Custom Channel** (**owned**): {1} {0}\nA custom channel that you can invite your friends to".format(
-                settings.golden_eggy_emoji, settings.custom_channel_cost)
+            cc_desc = "**Custom Channel** (**owned**): {1} {0}\n{2}".format(
+                settings.golden_eggy_emoji,
+                settings.custom_channel_cost,
+                settings.object_descs["custom channel"])
 
         emb.set_author(name="The Server Market",
                        icon_url="https://cdn.discordapp.com/attachments/1122532250915975208/1123268970674401392/360_F_526917681_vsjPlB6iYUPQvRqTYoElv8fDErQy24Lp-removebg-preview.png")
@@ -767,10 +826,14 @@ async def profile(ctx):
 
     emb.add_field(name="Basket",
                   value="You currently have:" + "\n" +
-                        "{2} {0} {1}".format(database.get_cash(authorID), settings.cash_name, settings.eggy_emoji) + "\n" +
-                        "{2} {0} {1}".format(database.get_iron_cash(authorID), settings.iron_cash_name, settings.silver_eggy_emoji) + "\n" +
-                        "{2} {0} {1}".format(database.get_gold_cash(authorID), settings.gold_cash_name, settings.golden_eggy_emoji) + "\n" +
-                        "{2} {0} {1}".format(database.get_eggyolks(authorID), settings.yolk_cash_name, settings.eggyolk_emoji),
+                        "{2} {0} {1}".format(database.get_cash(authorID), settings.cash_name,
+                                             settings.eggy_emoji) + "\n" +
+                        "{2} {0} {1}".format(database.get_iron_cash(authorID), settings.iron_cash_name,
+                                             settings.silver_eggy_emoji) + "\n" +
+                        "{2} {0} {1}".format(database.get_gold_cash(authorID), settings.gold_cash_name,
+                                             settings.golden_eggy_emoji) + "\n" +
+                        "{2} {0} {1}".format(database.get_eggyolks(authorID), settings.yolk_cash_name,
+                                             settings.eggyolk_emoji),
                   inline=False)
 
     if ctx.author.id == bot.author_id:
@@ -948,7 +1011,8 @@ async def crack(ctx):
 @commands.cooldown(1, settings.dig_cooldown, commands.BucketType.user)
 async def dig(ctx):
     authorID = ctx.author.id
-    if database.has_inventory_item(authorID, "delicate_shovel") or database.has_inventory_item(authorID, "golden_shovel"):
+    if database.has_inventory_item(authorID, "delicate_shovel") or database.has_inventory_item(authorID,
+                                                                                               "golden_shovel"):
         flevel = database.get_farm_level(authorID)
         if flevel == 1:
             rolled = random.randint(settings.level_1_farm_min - 1, settings.level_1_farm_max - 1)
@@ -1202,6 +1266,13 @@ async def test_emojis_error(ctx, error):
         await ctx.channel.send("https://tenor.com/view/no-nope-non-rick-rick-and-morty-gif-20999440")
 
 
+@bot.commands("sell")
+async def sell(ctx, item: int | str):
+    if id_to_object(item) is None and object_to_id(item) is None:
+        await ctx.channel.send(embed=create_embed("What", "what would you like to sell?\nyou can find the item ids in the shop"))
+        return
+
+
 def create_embed(title: str, description: str = "") -> discord.Embed:
     return discord.Embed(
         title=title, description=description
@@ -1216,7 +1287,7 @@ def id_to_object(obj_id: int) -> str | None:
     return None
 
 
-def object_to_id(obj: str) -> int:
+def object_to_id(obj: str) -> int | None:
     return settings.object_ids[obj]
 
 

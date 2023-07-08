@@ -17,6 +17,19 @@ class Database:
 
         print("created database")
 
+    def wipe_database(self):
+        db = sqlite3.connect(f"{self.file_name}.sqlite")
+        cursor = db.cursor()
+
+        cursor.execute(f"DELETE FROM main")
+        cursor.execute(f"DELETE FROM inventory")
+
+        db.commit()
+        cursor.close()
+        db.close()
+
+        print("Database wiped.")
+
     def add_user(self, id:int):
         db = sqlite3.connect(f"{self.file_name}.sqlite")
         cursor = db.cursor()
@@ -107,7 +120,7 @@ class Database:
         except:
             cash = 0
 
-        sql = (f"UPDATE {self.file_name} silver eggs SET ironcash = ? WHERE id = ?")
+        sql = (f"UPDATE main SET ironcash = ? WHERE id = ?")
         val = (cash + amount, id)
         cursor.execute(sql, val)
 
@@ -146,7 +159,8 @@ class Database:
         except:
             cash = 0
 
-        sql = (f"UPDATE {self.file_name} SET goldcash = ? WHERE id = ?")
+        sql = (f"UPDATE main SET goldcash = ? WHERE id = ?")
+
         val = (cash + amount, id)
         cursor.execute(sql, val)
 

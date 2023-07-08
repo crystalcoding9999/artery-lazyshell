@@ -90,6 +90,19 @@ object_ids = {
     "custom channel": 502
 }
 
+object_descs = {
+    "binoculars": "Find 1.5x as much eggs when hunting.",
+    "lucky drumstick": "Higher chance to find silver eggs while chatting.",
+    "golden chicken": "Increase your harvest by 1.5x.",
+    "eggcellent statue": "A statue to signify your devotion to egg.",
+    "delicate shovel": "Can be used to dig out lost eggs from the soil.",
+    "egg topper": "Can be used to make an egg into egg yolk.",
+    "golden shovel": "Does the work of a shovel but 1.5x better!",
+    "jackpot": "Increase bargain and dupe profit by 1.5x",
+    "custom role": "A custom role with a colour and name of your choice.",
+    "custom channel": "A custom channel that you can invite your friends to."
+}
+
 # eco
 binocular_cost = 50  # silver
 lucky_drumstick_cost = 150  # silver
