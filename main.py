@@ -1,7 +1,8 @@
 import os
 import random
 import time
-from datetime import date
+from datetime import date, datetime
+import shutil
 
 import discord
 from discord.ext import commands
@@ -1289,6 +1290,21 @@ def object_to_id(obj: str) -> int | None:
     return settings.object_ids[obj]
 
 
+def backup_database():
+    if os.path.exists("main.sqlite"):
+        now = str(date.today()) + "_" + str(datetime.now())
+        now = now.replace(":", "_")
+
+        target_dir = "./backups"
+        src_file = "./main.sqlite"
+        dst_file = target_dir + "/" + now + "_backup_main.sqlite"
+        dst_file = dst_file.replace(" ", "_").replace("-", "_")
+        shutil.copy(src_file, dst_file)
+
+
+if not os.path.exists("./backups"):
+    os.mkdir("./backups")
+
 if os.path.exists("./token.txt"):
     with open("./token.txt", "r") as f:
         lines = f.readlines()
@@ -1298,5 +1314,7 @@ else:
     token = os.getenv("TOKEN")
     keep_alive()  # Starts a webserver to be pinged.
     print("loaded token from os secrets")
+
+backup_database()
 
 bot.run(token)  # Starts the bot
