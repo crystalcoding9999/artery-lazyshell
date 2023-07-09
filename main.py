@@ -817,7 +817,7 @@ async def inventory(ctx, person: discord.Member = None):
 
 
 @bot.command("profile", aliases=["prof"])
-async def profile(ctx, who: discord.Member=None):
+async def profile(ctx, who: discord.Member = None):
     await eggy_check(ctx, False)
     if who == None:
         who = ctx.author
@@ -1183,7 +1183,8 @@ async def error_handling(ctx, error, command):
         elif command == "buy":
             await ctx.channel.send("missing required argument! {0}buy (item)".format(settings.bot_prefix))
         elif command == "pay":
-            await ctx.channel.send("missing required argument! {0}pay (target) (amount) (what)".format(settings.bot_prefix))
+            await ctx.channel.send(
+                "missing required argument! {0}pay (target) (amount) (what)".format(settings.bot_prefix))
         elif command == "bargain":
             await ctx.channel.send("missing required argument! {0}bargain (amount)".format(settings.bot_prefix))
     elif isinstance(error, commands.ConversionError):
@@ -1223,29 +1224,27 @@ async def eggy_check(ctx, chatted: bool):
                 rolled *= 1.5
                 if rolled > 100:
                     rolled = 100
-            silver_chance = 20 + (20 * (flevel - 2))
-            silver_double_chance = 10 + (10 * (flevel - 2))
-            gold_chance = 25 + (25 * (flevel - 3))
-            can_get_gold = False
-            if not chatted and gold_chance <= rolled:
-                can_get_gold = True
+            if silver:
+                get_chance = 20 + (20 * (flevel - 2))
+                double_chance = 10 + (10 * (flevel - 2))
+                if get_chance >= rolled:
+                    get = 1
+                if double_chance >= random.randint(1, 100):
+                    get = 2
+                database.give_iron_cash(authorID, get)
+                await ctx.channel.send(embed=create_embed("Lucky", "you found {0} {1} silver eggs".format(get,
+                                                                                                          settings.silver_eggy_emoji)))
             else:
-                if chatted and flevel == 5 and gold_chance <= rolled:
-                    can_get_gold = True
-            if silver and silver_chance <= rolled:
-                amount_of_eggs = 1
-                if silver_double_chance <= random.randint(1, 100):
-                    amount_of_eggs = 2
-
-                emb = create_embed("you found a silver egg", "you found {2} {0} {1}"
-                                   .format(amount_of_eggs, settings.iron_cash_name, settings.silver_eggy_emoji))
-                database.give_iron_cash(authorID, amount_of_eggs)
-                await ctx.channel.send(embed=emb)
-            elif can_get_gold:
-                emb = create_embed("you found a gold egg", "you found {1} 1 {0}"
-                                   .format(settings.gold_cash_name, settings.golden_eggy_emoji))
-                database.give_gold_cash(authorID, 1)
-                await ctx.channel.send(embed=emb)
+                if not chatted and flevel >= 3:
+                    get_chance = 20 + (20 * (flevel - 3))
+                    double_chance = 10 + (10 * (flevel - 3))
+                    if get_chance >= rolled:
+                        get = 1
+                    if double_chance >= random.randint(1, 100):
+                        get = 2
+                    database.give_gold_cash(authorID, get)
+                    await ctx.channel.send(embed=create_embed("Lucky", "you found {0} {1} gold eggs".format(get,
+                                                                                                            settings.golden_eggy_emoji)))
 
 
 @bot.command("test_emojis")
@@ -1312,7 +1311,8 @@ if os.path.exists("./token.txt"):
         print("loaded token from token.txt")
 else:
     token = os.getenv("TOKEN")
-    keep_alive()  # Starts a webserver to be pinged.
+    if token is not None:
+        keep_alive()  # Starts a webserver to be pinged.
     print("loaded token from os secrets")
 
 backup_database()
