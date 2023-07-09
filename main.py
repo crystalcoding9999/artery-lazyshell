@@ -64,7 +64,7 @@ async def on_message(ctx):
 
     if isinstance(ctx.channel, discord.Thread):
         if ctx.author.id == 235148962103951360 and ctx.channel.id == 1122532250915975208:
-            await ctx.channel.purge(limit=1)
+            await ctx.delete()
 
     await bot.process_commands(ctx)
 
@@ -315,7 +315,7 @@ async def harvest(ctx):
 
     if database.has_inventory_item(authorID, "golden_chicken"):
         earned *= 1.5
-        earned = round(earned, 0)
+        earned = int(round(earned, 0))
 
     emb = discord.Embed(
         description="successfully harvested {2} {0} {1}".format(earned, settings.cash_name, settings.eggy_emoji)
@@ -353,7 +353,7 @@ async def shop(ctx, store: str = "list"):
         elif flevel == 4:
             cost = settings.level_5_unlock_cost
 
-        bin_id = settings.object_ids["binocular"]
+        bin_id = settings.object_ids["binoculars"]
         ld_id = settings.object_ids["lucky drumstick"]
         gc_id = settings.object_ids["golden chicken"]
         es_id = settings.object_ids["eggcellent statue"]
@@ -708,6 +708,9 @@ async def buy_error(ctx, error):
 @commands.has_role(settings.staff_role)
 async def pay(ctx, target: discord.Member, amount: int, what):
     targetID = target.id
+    if ctx.author == target:
+        await ctx.channel.send("you cant give yourself shit")
+        return
     if what == "egg" or what == "eggs":
         database.give_cash(targetID, amount)
         emb = discord.Embed(
@@ -813,9 +816,11 @@ async def inventory(ctx, person: discord.Member = None):
 
 
 @bot.command("profile", aliases=["prof"])
-async def profile(ctx):
+async def profile(ctx, who: discord.Member=None):
     await eggy_check(ctx, False)
-    authorID = ctx.author.id
+    if who == None:
+        who = ctx.author
+    authorID = who.id
     emb = discord.Embed(
         title=""
     )
@@ -836,7 +841,7 @@ async def profile(ctx):
                                              settings.eggyolk_emoji),
                   inline=False)
 
-    if ctx.author.id == bot.author_id:
+    if authorID == bot.author_id:
         emb.set_author(name="god's profile", url=None, icon_url=ctx.author.avatar)
     else:
         emb.set_author(name="{0}'s profile".format(ctx.author.name), url=None, icon_url=ctx.author.avatar)
@@ -1177,7 +1182,7 @@ async def error_handling(ctx, error, command):
         elif command == "buy":
             await ctx.channel.send("missing required argument! {0}buy (item)".format(settings.bot_prefix))
         elif command == "pay":
-            await ctx.channel.send("missing required argument! {0}pay (target) (amounr)".format(settings.bot_prefix))
+            await ctx.channel.send("missing required argument! {0}pay (target) (amount) (what)".format(settings.bot_prefix))
         elif command == "bargain":
             await ctx.channel.send("missing required argument! {0}bargain (amount)".format(settings.bot_prefix))
     elif isinstance(error, commands.ConversionError):
@@ -1264,13 +1269,6 @@ async def test_emojis(ctx):
 async def test_emojis_error(ctx, error):
     if isinstance(error, commands.MissingRole):
         await ctx.channel.send("https://tenor.com/view/no-nope-non-rick-rick-and-morty-gif-20999440")
-
-
-@bot.commands("sell")
-async def sell(ctx, item: int | str):
-    if id_to_object(item) is None and object_to_id(item) is None:
-        await ctx.channel.send(embed=create_embed("What", "what would you like to sell?\nyou can find the item ids in the shop"))
-        return
 
 
 def create_embed(title: str, description: str = "") -> discord.Embed:

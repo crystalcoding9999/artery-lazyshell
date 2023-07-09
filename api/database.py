@@ -11,9 +11,7 @@ class Database:
             id INTEGER, cash INTEGER, farm_level INTEGER, ironcash INTEGER, goldcash INTEGER, eggyolks INTEGER
         )''')
 
-        cursor.execute(f'''CREATE TABLE IF NOT EXISTS inventory ( id INTEGER, binoculars INTEGER, lucky_drumstick 
-        INTEGER, golden_chicken INTEGER, eggcellent_statue INTEGER, delicate_shovel INTEGER, egg_topper INTEGER, 
-        golden_shovel INTEGER, jackpot INTEGER, custom_role INTEGER, custom_channel INTEGER )''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS inventory ( id INTEGER, binoculars INTEGER, lucky_drumstick INTEGER, golden_chicken INTEGER, eggcellent_statue INTEGER, delicate_shovel INTEGER, egg_topper INTEGER, golden_shovel INTEGER, jackpot INTEGER, custom_role INTEGER, custom_channel INTEGER, dev_crown INTEGER )''')
 
         print("created database")
 
@@ -42,10 +40,9 @@ class Database:
             val_1 = (id, settings.default_cash, 1, 0, 0, 0)
             cursor.execute(sql_1, val_1)
         if result2 is None:
-            sql_2 = ("INSERT INTO inventory(id, binoculars, lucky_drumstick, golden_chicken, eggcellent_statue, " +
-                     "delicate_shovel, egg_topper, golden_shovel, jackpot, custom_role, custom_channel) VALUES (?, ?, " +
-                     "?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            val_2 = (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            sql_2 = ("INSERT INTO inventory(id, binoculars, lucky_drumstick, golden_chicken, eggcellent_statue, delicate_shovel, egg_topper, golden_shovel, jackpot, custom_role, custom_channel, dev_crown) VALUES (?, ?, " +
+                     "?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            val_2 = (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             cursor.execute(sql_2, val_2)
 
         db.commit()
@@ -301,6 +298,9 @@ class Database:
         except:
             item_db = 0
 
+        if item_db is None:
+            item_db = 0
+
         sql = (f"UPDATE inventory SET {item} = ? WHERE id = ?")
         val = (item_db + amount, id)
         cursor.execute(sql, val)
@@ -343,9 +343,8 @@ class Database:
         db = sqlite3.connect(f"{self.file_name}.sqlite")
         cursor = db.cursor()
 
-        cursor.execute(f"SELECT SUM(binoculars, lucky_drumstick, golden_chicken, eggcellent_statue, delicate_shovel, " +
-                       f"egg_topper, golden_shovel, jackpot, custom_role, custom_channel) " +
-                       f"FROM inventory WHERE id = {id}")
+        cursor.execute(f"SELECT SUM(binoculars) + SUM(lucky_drumstick) + SUM(golden_chicken) + SUM(eggcellent_statue) + SUM(delicate_shovel) + SUM(egg_topper) + SUM(golden_shovel) + SUM(jackpot) + SUM(custom_role) + SUM(custom_channel) + SUM(dev_crown) AS total_items FROM inventory WHERE id = {id}")
+
         total_items = cursor.fetchone()[0]
         total_items = total_items if total_items else 0
 
