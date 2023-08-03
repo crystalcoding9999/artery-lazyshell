@@ -7,9 +7,10 @@ import shutil
 import discord
 from discord.ext import commands
 
+import api.boostManager
 import settings
 from api import Database
-from keep_alive import keep_alive
+import threading
 
 inte = discord.Intents.default()
 inte.messages = True
@@ -29,47 +30,32 @@ bot = commands.Bot(
 bot.author_id = 1102272783712522331  # Change to your discord id!!!
 
 database = Database()
-guild: discord.Guild = None
+server: discord.Guild | None = None
 
 
 @bot.event
 async def on_ready():  # When the bot is ready
-    global guild
-    guild = bot.get_guild(settings.guild_id)
+    global server
+    server = bot.get_guild(settings.guild_id)
     print("logged in as {0.user}".format(bot))
 
 
 @bot.event
-async def on_signal(signal):
-    if signal == "SIGINT":
-        print("Received SIGINT signal. Exiting gracefully...")
-        await send_farewell()
-
-
-async def send_farewell():
-    channel = guild.get_channel(settings.bot_channel)
-    emb = discord.Embed(
-        title="cya",
-        description="aight imma head out",
-        colour=discord.Color.red()
-    )
-
-    await channel.send(embed=emb)
-    await bot.close()
-
-
-@bot.event
 async def on_message(ctx):
-    if not ctx.channel.id == 842522103315169320:
+    if ctx.channel.id not in settings.talk_blacklisted_channels:
         await eggy_check(ctx, True)
 
     if isinstance(ctx.channel, discord.Thread):
         if ctx.author.id == 235148962103951360 and ctx.channel.id == 1122532250915975208:
-            await ctx.delete()
+            try:
+                await ctx.delete()
+            except discord.errors.NotFound:
+                pass
 
     await bot.process_commands(ctx)
 
 
+"""
 @bot.command("help")
 async def help(ctx, page: int = 1):
     emb = discord.Embed(
@@ -122,6 +108,103 @@ async def help(ctx, page: int = 1):
                               "**Bargain**\nBargain for your eggs"
             emb.set_footer(text="page 3/3")
 
+    await ctx.channel.send(embed=emb)
+"""
+
+
+@bot.group("help")
+async def help_group(ctx):
+    if ctx.invoked_subcommand is not None:
+        return
+
+    desc = "Economy ```+help economy```\nGuilds ```+help guilds```"
+
+    emb = create_embed("What do you need help with", desc)
+    await ctx.channel.send(embed=emb)
+
+
+@help_group.command("economy", aliases=["e", "eco"])
+async def help_eco(ctx, page: int = 1):
+    emb = discord.Embed(
+        title="Economy Commands"
+    )
+
+    if bot.get_guild(settings.guild_id).get_role(settings.staff_role) in ctx.author.roles:
+        if page == 1:
+            emb.description = "**Announce**\nMake an announcement for everyone to see\n\n" \
+                              "**Basket**\nShow you all the eggs you have\n\n" \
+                              "**Buy**\nBuy something from the market\n\n" \
+                              "**Crack**\nCrack an egg open to get egg yolks (**Requires Egg Topper**)\n\n" \
+                              "**Dig**\nDig up some eggs (**Requires Delicate Shovel or Golden Shovel**)\n\n" \
+                              "**Dupe**\nDo what science cant and clone some eggs\n\n"
+            emb.set_footer(text="page 1/3")
+        elif page == 2:
+            emb.description = "**Harvest**\nHarvest the eggs that the chickens laid\n\n" \
+                              "**Help**\nShow this list\n\n" \
+                              "**Hunt**\nTry and see if you can find some eggs lying around\n\n" \
+                              "**Inventory**\nShow you all the items you own\n\n" \
+                              "**Nick**\nTake some eggs from someone\n\n" \
+                              "**Pay**\nGive the previously taken eggs back"
+            emb.set_footer(text="page 2/3")
+        elif page == 3:
+            emb.description = "**Profile**\nShow some more information about your farm\n\n" \
+                              "**Shop**\nGo visit the store\n\n" \
+                              "**Share**\nShare some eggs with your friends\n\n" \
+                              "**Explore**\nGo explore for some eggs\n\n" \
+                              "**Bargain**\nBargain for your eggs"
+            emb.set_footer(text="page 3/3")
+    else:
+        if page == 1:
+            emb.description = "**Basket**\nShow you all the eggs you have\n\n" \
+                              "**Buy**\nBuy something from the market\n\n" \
+                              "**Crack**\nCrack an egg open to get egg yolks (**Requires Egg Topper**)\n\n" \
+                              "**Dig**\nDig up some eggs (**Requires Delicate Shovel or Golden Shovel**)\n\n" \
+                              "**Dupe**\nDo what science cant and clone some eggs\n\n" \
+                              "**Harvest**\nHarvest the eggs that the chickens laid\n\n"
+            emb.set_footer(text="page 1/3")
+        elif page == 2:
+            emb.description = "**Help**\nShow this list\n\n" \
+                              "**Hunt**\nTry and see if you can find some eggs lying around\n\n" \
+                              "**Inventory**\nShow you all the items you own\n\n" \
+                              "**Profile**\nShow some more information about your farm\n\n" \
+                              "**Shop**\nGo visit the store\n\n" \
+                              "**Share**\nShare some eggs with your friends"
+            emb.set_footer(text="page 2/3")
+        elif page == 3:
+            emb.description = "**Explore**\nGo explore for some eggs\n\n" \
+                              "**Bargain**\nBargain for your eggs"
+            emb.set_footer(text="page 3/3")
+
+    await ctx.channel.send(embed=emb)
+
+
+@help_group.command("guilds", aliases=["g", "guild"])
+async def help_guilds(ctx, page: int = 1):
+    emb = discord.Embed(
+        title="Guild Commands"
+    )
+
+    desc = ""
+
+    if page == 1:
+        desc = "**Guilds**\nShows a list of all the guilds\n\n" \
+               "**Guild**\nShows your guilds profile\n\n" \
+               "**Guild Profile**\nShows a guilds profile\n\n" \
+               "**Guild Deposit**\nDeposit egg/silver eggs/golden eggs into your guild bank\n\n" \
+               "**Guild Withdraw**\nWithdraw eggs/silver eggs/golden eggs from you guild bank (**Requires guild permissions!**)"
+    elif page == 2:
+        desc = "**Guild Join**\nJoin a guild (**7 day cooldown!**)\n\n" \
+               "**Guild Leave**\nLeave your guild\n\n" \
+               "**Guild Perms Check**\nSee if you have guild permissions\n\n" \
+               "**Guild Leaderboard**\npretty self explanatory"
+
+    if page == 2 and api.guildManager.is_guild_master(ctx) is True and ctx.guild.get_role(settings.guildMasterRole) in ctx.author.roles:
+        desc = desc + "\n\n" \
+                      "**Guild Perms Add**\nAdd guild permissions to a user\n\n" \
+                      "**Guild Perms Remove**\nRemove guild permissions from a user"
+
+
+    emb.description = desc
     await ctx.channel.send(embed=emb)
 
 
@@ -214,7 +297,7 @@ async def transfer(ctx, target: discord.Member, what: str = None, amount: int = 
             emb = discord.Embed(
                 title="success",
                 description="successfully shared {3} {0} {1} with {2}".format(amount, settings.cash_name, target,
-                                                                              settings.eggy_emoji)
+                                                                              settings.emojis["eggy"])
             )
         else:
             emb = discord.Embed(
@@ -228,7 +311,7 @@ async def transfer(ctx, target: discord.Member, what: str = None, amount: int = 
             emb = discord.Embed(
                 title="success",
                 description="successfully shared {3} {0} {1} with {2}".format(amount, settings.iron_cash_name, target,
-                                                                              settings.silver_eggy_emoji)
+                                                                              settings.emojis["silver eggy"])
             )
         else:
             emb = discord.Embed(
@@ -242,7 +325,7 @@ async def transfer(ctx, target: discord.Member, what: str = None, amount: int = 
             emb = discord.Embed(
                 title="success",
                 description="successfully shared {3} {0} {1} with {2}".format(amount, settings.gold_cash_name, target,
-                                                                              settings.golden_eggy_emoji)
+                                                                              settings.emojis["golden eggy"])
             )
         else:
             emb = discord.Embed(
@@ -314,12 +397,16 @@ async def harvest(ctx):
         await ctx.channel.send("looks like you have a bugged farm level please contact @crystalcoding_!")
         return
 
+    #    if database.has_inventory_item(authorID, "golden_chicken"):
+    #        earned *= 1.5
+    #        earned = int(round(earned, 0))
+
     if database.has_inventory_item(authorID, "golden_chicken"):
         earned *= 1.5
         earned = int(round(earned, 0))
 
     emb = discord.Embed(
-        description="successfully harvested {2} {0} {1}".format(earned, settings.cash_name, settings.eggy_emoji)
+        description="successfully harvested {2} {0} {1}".format(earned, settings.cash_name, settings.emojis["eggy"])
     )
 
     emb.set_author(name="Egg Basket",
@@ -334,6 +421,7 @@ async def harvest_error(ctx, error):
     await error_handling(ctx, error, "harvest")
 
 
+"""
 @bot.command("shop", aliases=["store", "market"])
 async def shop(ctx, store: str = "list"):
     await eggy_check(ctx, False)
@@ -366,115 +454,115 @@ async def shop(ctx, store: str = "list"):
         if flevel != 5:
             fl_desc = "{3}**Farm Upgrade**: {1} {2}\nUpgrade your farm to level {0}".format((flevel + 1), cost,
                                                                                             settings.eggy_emoji,
-                                                                                            settings.farm_emoji, )
+                                                                                            settings.emojis["farm"], )
         else:
-            fl_desc = "{0}**Farm Upgrade**:\nYou already have the max level farm!".format(settings.farm_emoji)
+            fl_desc = "{0}**Farm Upgrade**:\nYou already have the max level farm!".format(settings.emojis["farm"])
 
         if not database.has_inventory_item(authorID, "binoculars"):
-            bin_desc = "{2}**Binoculars**: {0} {1}\n{3}".format(settings.binocular_cost,
-                                                                settings.silver_eggy_emoji,
-                                                                settings.binoculars_emoji,
+            bin_desc = "{2}**Binoculars**: {0} {1}\n{3}".format(settings.object_costs["binoculars"],
+                                                                settings.emojis["silver eggy"],
+                                                                settings.emojis["binoculars"],
                                                                 settings.object_descs["binoculars"])
         else:
             bin_desc = "{2}**Binoculars** (**owned**): {0} {1}\n{3}".format(
-                settings.binocular_cost,
-                settings.silver_eggy_emoji,
-                settings.binoculars_emoji,
+                settings.object_costs["binoculars"],
+                settings.emojis["silver eggy"],
+                settings.emojis["binoculars"],
                 settings.object_descs["binoculars"])
 
         if not database.has_inventory_item(authorID, "lucky_drumstick"):
             ld_desc = "{2}**Lucky Drumstick**: {1} {0}\n{3}".format(
-                settings.silver_eggy_emoji,
-                settings.lucky_drumstick_cost,
-                settings.drumstick_emoji,
+                settings.emojis["silver eggy"],
+                settings.object_costs["lucky drumstick"],
+                settings.emojis["lucky drumstick"],
                 settings.object_descs["lucky drumstick"])
         else:
             ld_desc = "{2}**Lucky Drumstick** (**owned**): {1} {0}\n{3}".format(
-                settings.silver_eggy_emoji,
-                settings.lucky_drumstick_cost,
-                settings.drumstick_emoji,
+                settings.emojis["silver eggy"],
+                settings.object_costs["lucky drumstick"],
+                settings.emojis["lucky drumstick"],
                 settings.object_descs["lucky drumstick"])
 
         if not database.has_inventory_item(authorID, "golden_chicken"):
             gc_desc = "{2}**Golden Chicken**: {1} {0}\n{3}".format(
-                settings.silver_eggy_emoji,
-                settings.golden_chicken_cost,
-                settings.chicken_emoji,
+                settings.emojis["silver eggy"],
+                settings.object_costs["golden chicken"],
+                settings.emojis["golden chicken"],
                 settings.object_descs["golden chicken"])
         else:
             gc_desc = "{2}**Golden Chicken** (**owned**): {1} {0}\n{3}".format(
-                settings.silver_eggy_emoji,
-                settings.golden_chicken_cost,
-                settings.chicken_emoji,
+                settings.emojis["silver eggy"],
+                settings.object_costs["golden chicken"],
+                settings.emojis["golden chicken"],
                 settings.object_descs["golden chicken"])
 
         if not database.has_inventory_item(authorID, "eggcellent_statue"):
             es_desc = "{2}**Eggcellent Statue**: {1} {0}\n{3}".format(
-                settings.golden_eggy_emoji,
-                settings.egg_statue_cost,
-                settings.eggy_statue_emoji,
+                settings.emojis["golden eggy"],
+                settings.object_costs["eggcellent statue"],
+                settings.emojis["eggcellent statue"],
                 settings.object_descs["eggcellent statue"])
         else:
             count = database.get_inventory_amount(authorID, "eggcellent_statue")
             es_desc = "{3}**Eggcellent Statue** (**{2} owned**): {1} {0}\n{3}".format(
-                settings.golden_eggy_emoji,
-                settings.egg_statue_cost,
+                settings.emojis["golden eggy"],
+                settings.object_costs["eggcellent statue"],
                 count,
-                settings.eggy_statue_emoji,
+                settings.emojis["eggcellent statue"],
                 settings.object_descs["eggcellent statue"])
 
         if not database.has_inventory_item(authorID, "delicate_shovel"):
             ds_desc = "{2}**Delicate Shovel**: {1} {0}\n{3}".format(
                 settings.eggy_emoji,
-                settings.delicate_shovel_cost,
-                settings.shovel_emoji,
+                settings.object_costs["delicate shovel"],
+                settings.emojis["delicate shovel"],
                 settings.object_descs["delicate shovel"])
         else:
             ds_desc = "{2}**Delicate Shovel** (**owned**): {1} {0}\n{3}".format(
                 settings.eggy_emoji,
-                settings.delicate_shovel_cost,
-                settings.shovel_emoji,
+                settings.object_costs["delicate shovel"],
+                settings.emojis["delicate shovel"],
                 settings.object_descs["delicate shovel"])
 
         if not database.has_inventory_item(authorID, "egg_topper"):
             et_desc = "{2}**Egg Topper**: {1} {0}\n{3}".format(
                 settings.eggy_emoji,
-                settings.egg_toper_cost,
-                settings.topper_emoji,
+                settings.object_costs["egg topper"],
+                settings.emojis["egg topper"],
                 settings.object_descs["egg topper"])
         else:
             count = database.get_inventory_amount(authorID, "egg topper")
             et_desc = "{3}**Egg Topper** (**{2} owned**): {1} {0}\n{3}".format(
                 settings.eggy_emoji,
-                settings.egg_toper_cost,
+                settings.object_costs["egg topper"],
                 count,
-                settings.topper_emoji,
+                settings.emojis["egg topper"],
                 settings.object_descs["egg topper"])
 
         if not database.has_inventory_item(authorID, "golden_shovel"):
             gs_desc = "{2}**Golden Shovel**: {1} {0}\n{3}".format(
-                settings.golden_eggy_emoji,
-                settings.golden_shovel_cost,
-                settings.golden_shovel_emoji,
+                settings.emojis["golden eggy"],
+                settings.object_costs["golden shovel"],
+                settings.emojis["golden shovel"],
                 settings.object_descs["golden shovel"])
         else:
             gs_desc = "{2}**Golden Shovel** (**owned**): {1} {0}\n{3}".format(
-                settings.golden_eggy_emoji,
-                settings.golden_shovel_cost,
-                settings.golden_shovel_emoji,
+                settings.emojis["golden eggy"],
+                settings.object_costs["golden shovel"],
+                settings.emojis["golden shovel"],
                 settings.object_descs["golden shovel"])
 
         if not database.has_inventory_item(authorID, "jackpot"):
             jp_desc = "{2}**Jackpot**: {1} {0}\n{3}" \
-                .format(settings.silver_eggy_emoji,
-                        settings.jackpot_cost,
-                        settings.jackpot_emoji,
+                .format(settings.emojis["silver eggy"],
+                        settings.object_costs["jackpot"],
+                        settings.emojis["jackpot"],
                         settings.object_descs["jackpot"])
         else:
             jp_desc = "{2}**Jackpot** (**owned**): {1} {0}\n{3}" \
-                .format(settings.silver_eggy_emoji,
-                        settings.jackpot_cost,
-                        settings.jackpot_emoji,
+                .format(settings.emojis["silver eggy"],
+                        settings.object_costs["jackpot"],
+                        settings.emojis["jackpot"],
                         settings.object_descs["jackpot"])
 
         # emb.add_field(name="more coming soon", value="probably...", inline=False)
@@ -519,24 +607,24 @@ async def shop(ctx, store: str = "list"):
 
         if not database.has_inventory_item(authorID, "custom_role"):
             cr_desc = "**Custom Role**: {1} {0}\n{2}".format(
-                settings.golden_eggy_emoji,
-                settings.custom_role_cost,
+                settings.emojis["golden eggy"],
+                settings.object_costs["custom role"],
                 settings.object_descs["custom role"])
         else:
             cr_desc = "**Custom Role** (**owned**): {1} {0}\n{2}".format(
-                settings.golden_eggy_emoji,
-                settings.custom_role_cost,
+                settings.emojis["golden eggy"],
+                settings.object_costs["custom channel"],
                 settings.object_descs["custom role"])
 
         if not database.has_inventory_item(authorID, "custom_channel"):
             cc_desc = "**Custom Channel**: {1} {0}\n{2}".format(
-                settings.golden_eggy_emoji,
-                settings.custom_channel_cost,
+                settings.emojis["golden eggy"],
+                settings.object_costs["custom channel"],
                 settings.object_descs["custom channel"])
         else:
             cc_desc = "**Custom Channel** (**owned**): {1} {0}\n{2}".format(
-                settings.golden_eggy_emoji,
-                settings.custom_channel_cost,
+                settings.emojis["golden eggy"],
+                settings.object_costs["custom channel"],
                 settings.object_descs["custom channel"])
 
         emb.set_author(name="The Server Market",
@@ -551,8 +639,176 @@ async def shop(ctx, store: str = "list"):
             description="The Economy Store ```+shop economy```\nThe Server Store ```+shop server```"
         )
         await ctx.channel.send(embed=emb)
+"""
 
 
+@bot.command("shop", aliases=["store", "market"])
+async def shop(ctx, store: str = "list"):
+    await eggy_check(ctx, False)
+    authorID = ctx.author.id
+    eco_aliases = ["e", "eco", "economy"]
+    serv_aliases = ["s", "serv", "server"]
+    boost_aliases = ["b", "boost", "boosts", "boosters", "booster"]
+    if store in eco_aliases:
+        desc = ""
+
+        if database.get_farm_level(authorID) != 5:
+            next = database.get_farm_level(authorID) + 1
+            desc = settings.emojis["farm"] + "**farm upgrade**: " + str(settings.object_costs[("farm_" + str(next))]) + \
+                   "" + settings.emojis["eggy"] + "\nUpgrade your farm to level " + str(next) + "\n"
+
+        sorted_ids = sorted(settings.object_ids.items(), key=lambda x: x[1])
+
+        for itemID in sorted_ids:
+            try:
+                item = id_to_object(itemID[1])
+                if item is None:
+                    continue
+                if settings.object_types[item] != "multi item" and settings.object_types[item] != "item":
+                    continue
+                itm_desc = ""
+                if item in settings.emojis:
+                    itm_desc = settings.emojis[item]
+
+                itm_desc = itm_desc + "**" + item + "**"
+
+                if database.has_inventory_item(authorID, item):
+                    if item in settings.object_types:
+                        if settings.object_types[item] == "multi item":
+                            itm_desc = itm_desc + " (**" + str(
+                                database.get_inventory_amount(authorID, item)) + " owned**)"
+                        else:
+                            itm_desc = itm_desc + " (**owned**)"
+
+                itm_desc = itm_desc + ": " + str(settings.object_costs[item])
+
+                emoji = settings.emojis["eggy"]
+                if settings.object_egg_types[item] == "silver":
+                    emoji = settings.emojis["silver eggy"]
+                elif settings.object_egg_types[item] == "gold":
+                    emoji = settings.emojis["golden eggy"]
+
+                itm_desc = itm_desc + " " + emoji + "\n" + settings.object_descs[item] + "\n`item id: " + str(
+                    settings.object_ids[item]) + "`" + "\n"
+
+                desc = desc + itm_desc
+            except IndexError:
+                break
+
+        emb = create_embed(None, desc)
+
+        emb.set_author(name="The Egg Market",
+                       icon_url="https://cdn.discordapp.com/attachments/1122532250915975208/1123268970674401392"
+                                "/360_F_526917681_vsjPlB6iYUPQvRqTYoElv8fDErQy24Lp-removebg-preview.png")
+
+        await ctx.channel.send(embed=emb)
+    elif store in serv_aliases:
+        desc = ""
+
+        sorted_ids = sorted(settings.object_ids.items(), key=lambda x: x[1])
+
+        for itemID in sorted_ids:
+            try:
+                item = id_to_object(itemID[1])
+                if item is None:
+                    continue
+                if settings.object_types[item] != "server item":
+                    continue
+                itm_desc = ""
+                if item in settings.emojis:
+                    itm_desc = settings.emojis[item]
+
+                itm_desc = itm_desc + "**" + item + "**"
+
+                if database.has_inventory_item(authorID, item):
+                    if item in settings.object_types:
+                        if settings.object_types[item] == "multi item":
+                            itm_desc = itm_desc + " (**" + str(
+                                database.get_inventory_amount(authorID, item)) + " owned**)"
+                        else:
+                            itm_desc = itm_desc + " (**owned**)"
+
+                itm_desc = itm_desc + ": " + str(settings.object_costs[item])
+
+                emoji = settings.emojis["eggy"]
+                if settings.object_egg_types[item] == "silver":
+                    emoji = settings.emojis["silver eggy"]
+                elif settings.object_egg_types[item] == "gold":
+                    emoji = settings.emojis["golden eggy"]
+
+                itm_desc = itm_desc + " " + emoji + "\n" + settings.object_descs[item] + "\n`item id: " + str(
+                    settings.object_ids[item]) + "`" + "\n"
+
+                desc = desc + itm_desc
+            except IndexError:
+                break
+
+        emb = create_embed(None, desc)
+
+        emb.set_author(name="The Egg Market",
+                       icon_url="https://cdn.discordapp.com/attachments/1122532250915975208/1123268970674401392"
+                                "/360_F_526917681_vsjPlB6iYUPQvRqTYoElv8fDErQy24Lp-removebg-preview.png")
+
+        await ctx.channel.send(embed=emb)
+    elif store in boost_aliases:
+        desc = ""
+
+        sorted_ids = sorted(settings.object_ids.items(), key=lambda x: x[1])
+
+        for itemID in sorted_ids:
+            try:
+                item = id_to_object(itemID[1])
+                if item is None:
+                    continue
+                if settings.object_types[item] != "boost":
+                    continue
+                itm_desc = ""
+                if item in settings.emojis:
+                    itm_desc = settings.emojis[item]
+
+                itm_desc = itm_desc + "**" + item + "**"
+
+                if database.has_inventory_item(authorID, item):
+                    if item in settings.object_types:
+                        if settings.object_types[item] == "multi item":
+                            itm_desc = itm_desc + " (**" + str(
+                                database.get_inventory_amount(authorID, item)) + " owned**)"
+                        else:
+                            itm_desc = itm_desc + " (**owned**)"
+
+                itm_desc = itm_desc + ": " + str(settings.object_costs[item])
+
+                emoji = settings.emojis["eggy"]
+                if settings.object_egg_types[item] == "silver":
+                    emoji = settings.emojis["silver eggy"]
+                elif settings.object_egg_types[item] == "gold":
+                    emoji = settings.emojis["golden eggy"]
+
+                itm_desc = itm_desc + " " + emoji + "\n" + settings.object_descs[item] + "\n`item id: " + str(
+                    settings.object_ids[item]) + "`" + "\n"
+
+                desc = desc + itm_desc
+            except IndexError:
+                break
+
+        desc = desc + "\nall boosts last 2 hours!"
+
+        emb = create_embed(None, desc)
+
+        emb.set_author(name="The Egg Market",
+                       icon_url="https://cdn.discordapp.com/attachments/1122532250915975208/1123268970674401392"
+                                "/360_F_526917681_vsjPlB6iYUPQvRqTYoElv8fDErQy24Lp-removebg-preview.png")
+
+        await ctx.channel.send(embed=emb)
+    else:
+        emb = discord.Embed(
+            title="Which store would you like to go to?",
+            description="The Economy Store ```+shop economy```\nThe Server Store ```+shop server```\nThe Boosters Store```+shop boosts```"
+        )
+        await ctx.channel.send(embed=emb)
+
+
+"""
 @bot.command("buy", aliases=["purchase"])
 async def buy(ctx, *, item):
     await eggy_check(ctx, False)
@@ -589,7 +845,7 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "binoculars", 1)
             await ctx.channel.send(
                 "successfully purchased the binoculars for {2} {0} {1}".format(cost, settings.cash_name,
-                                                                               settings.silver_eggy_emoji))
+                                                                               settings.emojis["silver eggy"]))
         else:
             await ctx.channel.send("you don't have enough silver eggs to purchase this")
     elif item == "luckydrumstick" or item == "lucky drumstick" or item == "lucky_drumstick":
@@ -599,7 +855,7 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "lucky_drumstick", 1)
             await ctx.channel.send(
                 "successfully purchased the lucky drumstick for {2} {0} {1}".format(cost, settings.cash_name,
-                                                                                    settings.silver_eggy_emoji))
+                                                                                    settings.emojis["silver eggy"]))
         else:
             await ctx.channel.send("you don't have enough silver eggs to purchase this")
     elif item == "goldenchicken" or item == "golden chicken" or item == "gold chicken" or item == "golden_chicken" or item == "gold_chicken":
@@ -609,7 +865,7 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "golden_chicken", 1)
             await ctx.channel.send(
                 "successfully purchased the golden chicken for {2} {0} {1}".format(cost, settings.iron_cash_name,
-                                                                                   settings.silver_eggy_emoji))
+                                                                                   settings.emojis["silver eggy"]))
         else:
             await ctx.channel.send("you don't have enough silver eggs to purchase this")
     elif item == "custom role" or item == "customrole" or item == "custom_role":
@@ -625,7 +881,7 @@ async def buy(ctx, *, item):
             await ctx.channel.send(
                 "successfully purchased the custom role for {2} {0} {1}. staff will contact you shortly to grant you your role".format(
                     cost, settings.gold_cash_name,
-                    settings.golden_eggy_emoji))
+                    settings.emojis["golden eggy"]))
             await mchannel.send("{1.mention}! {0.mention} bought custom role!".format(ctx.author, srole))
         else:
             await ctx.channel.send("you don't have enough golden eggs to purchase this")
@@ -642,7 +898,7 @@ async def buy(ctx, *, item):
             await ctx.channel.send(
                 "successfully purchased the custom channel for {2} {0} {1}. staff will contact you shortly to grant you your channel".format(
                     cost, settings.gold_cash_name,
-                    settings.golden_eggy_emoji))
+                    settings.emojis["golden eggy"]))
             await mchannel.send("{1.mention}! {0.mention} bought custom channel!".format(ctx.author, srole))
         else:
             await ctx.channel.send("you don't have enough golden eggs to purchase this")
@@ -653,7 +909,7 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "eggcellent_statue", 1)
             await ctx.channel.send(
                 "successfully purchased a eggcellent statue for {2} {0} {1}".format(cost, settings.gold_cash_name,
-                                                                                    settings.golden_eggy_emoji))
+                                                                                    settings.emojis["golden eggy"]))
         else:
             await ctx.channel.send("you don't have enough golden eggs to purchase this")
     elif item == "egg topper" or item == "eggy topper" or item == "egg_topper" or item == "eggy_topper":
@@ -683,7 +939,7 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "golden_shovel", 1)
             await ctx.channel.send(
                 "successfully purchased the golden shovel for {2} {0} {1}".format(cost, settings.gold_cash_name,
-                                                                                  settings.golden_eggy_emoji))
+                                                                                  settings.emojis["golden eggy"]))
         else:
             await ctx.channel.send("you don't have enough golden eggs to purchase this")
     elif item == "jackpot" or item == "jpot" or item == "jackp":
@@ -693,16 +949,476 @@ async def buy(ctx, *, item):
             database.give_inventory_item(authorID, "jackpot", 1)
             await ctx.channel.send(
                 "successfully purchased the jackpot for {2} {0} {1}".format(cost, settings.iron_cash_name,
-                                                                            settings.silver_eggy_emoji))
+                                                                            settings.emojis["silver eggy"]))
         else:
             await ctx.channel.send("you don't have enough silver eggs to purchase this")
     else:
         await ctx.channel.send("invalid item")
+"""
+
+
+@bot.command("buy", aliases=["purchase"])
+async def buy(ctx, *, item):
+    await eggy_check(ctx, False)
+    authorID = ctx.author.id
+
+    try:
+        item = int(item)
+    except ValueError:
+        item = item
+
+    if isinstance(item, int):
+        item = id_to_object(item)
+
+    if item == "farm":
+        item = "farm_" + str(database.get_farm_level(authorID) + 1)
+        if item == "farm_6":
+            await ctx.channel.send("you already own the max level farm")
+            return
+
+    if item is None or item not in settings.object_costs:
+        await ctx.channel.send("invalid item")
+        return
+
+    cost = settings.object_costs[item]
+    can_buy = False
+    if settings.object_egg_types[item] == "":
+        can_buy = database.get_cash(authorID) >= cost
+    elif settings.object_egg_types[item] == "silver":
+        can_buy = database.get_iron_cash(authorID) >= cost
+    elif settings.object_egg_types[item] == "gold":
+        can_buy = database.get_gold_cash(authorID) >= cost
+
+    if not can_buy:
+        await ctx.channel.send("you dont have enough {0} eggs to buy this".format(settings.object_egg_types[item]))
+        return
+
+    emoji = settings.emojis["eggy"]
+
+    if not item.startswith("farm"):
+        database.give_inventory_item(authorID, item, 1)
+    else:
+        database.give_farm_level(authorID, 1)
+
+    if settings.object_egg_types[item] == "":
+        database.give_cash(authorID, -cost)
+    elif settings.object_egg_types[item] == "silver":
+        database.give_iron_cash(authorID, -cost)
+        emoji = settings.emojis["silver eggy"]
+    elif settings.object_egg_types[item] == "gold":
+        database.give_gold_cash(authorID, -cost)
+        emoji = settings.emojis["golden eggy"]
+
+    await ctx.channel.send(embed=create_embed("Success", "Successfully bought {0} for {1} {2} {3} eggs"
+                                              .format(item, emoji, cost, settings.object_egg_types[item])))
 
 
 @buy.error
 async def buy_error(ctx, error):
     await error_handling(ctx, error, "buy")
+
+
+@bot.command("sell")
+async def sell(ctx, *, item):
+    await eggy_check(ctx, False)
+    authorID = ctx.author.id
+
+    try:
+        item = int(item)
+    except ValueError:
+        item = item
+    if isinstance(item, int):
+        item = id_to_object(item)
+
+    if item is None and item not in settings.object_ids:
+        await ctx.channel.send("invalid item")
+        return
+
+    if not database.has_inventory_item(authorID, item):
+        await ctx.channel.send("you dont own this item!")
+        return
+
+    return_eggs = int(round((settings.object_costs[item] / 2) + 0.1))
+    database.give_inventory_item(authorID, item, -1)
+
+    emoji = settings.emojis["eggy"]
+
+    if settings.object_egg_types[item] == "":
+        database.give_cash(authorID, return_eggs)
+    elif settings.object_egg_types[item] == "silver":
+        database.give_iron_cash(authorID, return_eggs)
+        emoji = settings.emojis["silver eggy"]
+    elif settings.object_egg_types[item] == "gold":
+        database.give_gold_cash(authorID, return_eggs)
+        emoji = settings.emojis["golden eggy"]
+
+    await ctx.channel.send(embed=create_embed("Sold!", "Successfully sold the {0} for {1} {2} {3} eggs"
+                                              .format(item, emoji, return_eggs, settings.object_egg_types[item])))
+
+
+class guildButtons(discord.ui.View):
+
+    def __init__(self):
+        print("created guild buttons")
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="join valkyrie", style=discord.ButtonStyle.red)
+    async def mistake(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for guild in settings.guilds:
+            r = interaction.guild.get_role(settings.guilds[guild])
+            if r in interaction.user.roles:
+                await interaction.response.send_message("you are already in a guild!")
+                return
+        role = interaction.guild.get_role(settings.guilds["valkyrie"])
+        api.guildManager.set_guild_join_time(interaction.user.id, 604800)
+        await interaction.user.add_roles(role)
+        await interaction.response.send_message(embed=create_embed("~~Made a mistake~~ Joined Valkyrie"))
+
+    @discord.ui.button(label="join solstice", style=discord.ButtonStyle.primary)
+    async def solstice(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for guild in settings.guilds:
+            r = interaction.guild.get_role(settings.guilds[guild])
+            if r in interaction.user.roles:
+                await interaction.response.send_message("you are already in a guild!")
+                return
+        role = interaction.guild.get_role(settings.guilds["solstice"])
+        api.guildManager.set_guild_join_time(interaction.user.id, 604800)
+        await interaction.user.add_roles(role)
+        await interaction.response.send_message(embed=create_embed("Joined Solstice"))
+
+    @discord.ui.button(label="join nyx", style=discord.ButtonStyle.green)
+    async def nyx(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for guild in settings.guilds:
+            r = interaction.guild.get_role(settings.guilds[guild])
+            if r in interaction.user.roles:
+                await interaction.response.send_message("you are already in a guild!")
+                return
+        role = interaction.guild.get_role(settings.guilds["nyx"])
+        api.guildManager.set_guild_join_time(interaction.user.id, 604800)
+        await interaction.user.add_roles(role)
+        await interaction.response.send_message(embed=create_embed("Joined Nyx"))
+
+    @discord.ui.button(label="join zephyr", style=discord.ButtonStyle.gray)
+    async def zephyr(self, interaction: discord.Interaction, button: discord.ui.Button):
+        for guild in settings.guilds:
+            r = interaction.guild.get_role(settings.guilds[guild])
+            if r in interaction.user.roles:
+                await interaction.response.send_message("you are already in a guild!")
+                return
+        role = interaction.guild.get_role(settings.guilds["zephyr"])
+        api.guildManager.set_guild_join_time(interaction.user.id, 604800)
+        await interaction.user.add_roles(role)
+        await interaction.response.send_message(embed=create_embed("Joined Zephyr"))
+
+
+@bot.command("guilds")
+async def guilds(ctx):
+    if api.guildManager.get_guild(ctx) == "None":
+        await ctx.channel.send(embed=create_embed("Guilds",
+                                                  "this is a list of all the currently active guilds:\n- valkyrie\n- solstice\n- nyx\n- "
+                                                  "zephyr\nif you've made a choice you can use the buttons below:"),
+                               view=guildButtons())
+        return
+    await ctx.channel.send(embed=create_embed("Guilds",
+                                              "this is a list of all the currently active guilds:\n- valkyrie\n- solstice\n- nyx\n- "
+                                              "zephyr"))
+
+
+@bot.group()
+async def guild(ctx):
+    if ctx.invoked_subcommand is not None:
+        return
+
+    if api.guildManager.get_guild(ctx) == "None":
+        await ctx.channel.send(
+            embed=create_embed("error", "you do not have a guild! join one with +guild join or +guilds"))
+    else:
+        await guilds_profile(ctx, api.guildManager.get_guild(ctx))
+
+
+@guild.command("profile")
+async def guilds_profile(ctx, guild: str = ""):
+    if guild == "" or guild not in settings.guilds:
+        guild = api.guildManager.get_guild(ctx)
+
+    if guild == "None" or guild == "":
+        await ctx.channel.send("guild not found!")
+        return
+
+    guild = guild.lower()
+    if guild not in settings.guilds:
+        await ctx.channel.send("This guild does not exist!")
+        return
+
+    member_count = str(len(ctx.guild.get_role(settings.guilds[guild]).members))
+    worth = str(api.guildManager.get_guild_worth(guild))
+    cash = str(api.guildManager.get_guild_cash(guild))
+    ironcash = str(api.guildManager.get_guild_ironcash(guild))
+    goldcash = str(api.guildManager.get_guild_goldcash(guild))
+
+    if guild == "zephyr":
+        desc = "Total Worth: " + worth + "\n" \
+               + settings.emojis["eggy"] + " " + cash + "\n" \
+               + settings.emojis["silver eggy"] + " " + ironcash + "\n" \
+               + settings.emojis["golden eggy"] + " " + goldcash + "\n" \
+                                                                   "Member Count: " + member_count + "\n\n" \
+                                                                                                     "Join us at zephyr, where the winds of friendship will grant us victory over all who oppose us. Be it friend or foe, all are welcome at zephyr.\n\n" \
+                                                                                                     "We offer assistance in all walks of life. Ofcourse with a little fee for our assistance in interguild affairs. We will share and dwell in the spoils of war, protect justice and fairness across the land, and do so as a team.\n\n" \
+                                                                                                     "We believe in freedom and justice and peace. Here at zephyr, we have no enemies... just minor annoying inconveniences.\n\n" \
+                                                                                                     "So dont be shy, join us now!"
+
+        emb = create_embed("Zephyr Statistics", desc)
+        emb.set_image(url="https://cdn.discordapp.com/attachments/1102274225378693223/1136320199893717082/image.png")
+
+        await ctx.channel.send(embed=emb)
+    elif guild == "nyx":
+        desc = "Total worth: " + worth + "\n" \
+               + settings.emojis["eggy"] + " " + cash + "\n" \
+               + settings.emojis["silver eggy"] + " " + ironcash + "\n" \
+               + settings.emojis["golden eggy"] + " " + goldcash + "\n" \
+                                                                   "Member Count: " + member_count + "\n\n" \
+                                                                                                     "Be it to bomb people in brawlhalla or throw bombs as klee at timmies pigeons, it's fun right.\n\n" \
+                                                                                                     "Be prepared to actually have good teammates and not rage over team diff." \
+                                                                                                     "Be it garticphone or other minigames i can carry and train us to be a strong reliable guild.\n\n" \
+                                                                                                     "A thing only my guild can provide is also good advices and emotional support as bonus! And even of you don't have a talen for minigames i can train you to be a pro.\n\n" \
+                                                                                                     "_We shall be victorious with the help of chaos and our ability to hide in the shadows to attack in the night_"
+
+        emb = create_embed("Nyx Statistics", desc)
+        emb.set_image(
+            url="https://cdn.discordapp.com/attachments/1132334113416826880/1134923290557808760/a3443518535_10.jpg")
+
+        await ctx.channel.send(embed=emb)
+    elif guild == "solstice":
+        desc = "Total worth: " + worth + "\n" \
+               + settings.emojis["eggy"] + " " + cash + "\n" \
+               + settings.emojis["silver eggy"] + " " + ironcash + "\n" \
+               + settings.emojis["golden eggy"] + " " + goldcash + "\n" \
+                                                                   "Member Count: " + member_count + "\n\n" \
+                                                                                                     "Embrace the harmony of the duality of the elements!\n" \
+                                                                                                     "Whether that be on a winning hot streak or to show of your cool skills to the crowd, Solstice is the place to be.\n\n" \
+                                                                                                     "Come dusk or dawn, you will be the ray of sunlight the world needs (and to outshine your enemies)\n\n" \
+                                                                                                     "_Illuminating your path to greatness_"
+
+        emb = create_embed("Solstice Statistics", desc)
+        emb.set_image(url="https://cdn.discordapp.com/attachments/1132334113416826880/1135234083534929920/IMG_2649.png")
+
+        await ctx.channel.send(embed=emb)
+    elif guild == "valkyrie":
+        desc = "Total worth: " + worth + "\n" \
+               + settings.emojis["eggy"] + " " + cash + "\n" \
+               + settings.emojis["silver eggy"] + " " + ironcash + "\n" \
+               + settings.emojis["golden eggy"] + " " + goldcash + "\n" \
+                                                                   "Member Count: " + member_count + "\n\n" \
+                                                                                                     "Want to join a friendly yet competitive clan? Want to perhaps, win with pride? Sick and tired of leaders saying it all them? Not respecting your existence? Want to have, a getaway?\n\n" \
+                                                                                                     "Well my friend, let me introduce you to Valkyrie\n\n" \
+                                                                                                     "Composed of many talented members, we together rise up against tyranny. Like eagles, fight day or night, we will still reign king. Join the action, join the pact. Spread the words, spread your wings.\n\n" \
+                                                                                                     "Why wait? Join us now!\n\n" \
+                                                                                                     "_Puganums, Vincimus, Regnamus. \nWe fight, we win, we reign._"
+
+        emb = create_embed("Valkyrie Statistics", desc)
+        emb.set_image(url="https://cdn.discordapp.com/attachments/1102274225378693223/1136320294672420914/image.png")
+
+        await ctx.channel.send(embed=emb)
+
+
+@guild.command("deposit")
+async def deposit(ctx, amount: int = 0, what: str = "eggs"):
+    if api.guildManager.get_guild(ctx) == "None":
+        await ctx.channel.send("you do not have a guild!")
+        return
+
+    if amount <= 0:
+        await ctx.channel.send("you cant deposit this amount!")
+        return
+
+    authorID = ctx.author.id
+
+    normal = ["eggs", "eggys", "egg", "eggy"]
+    silver = ["silver eggs", "silver_eggs", "silver eggys", "silver_eggy", "silver_egg"]
+    gold = ["gold eggs", "gold_eggs", "gold eggys", "gold_eggy", "gold_egg", "golden eggs", "golden_eggs",
+            "golden eggys", "goldeb_eggy", "goldeb_egg"]
+
+    guild = api.guildManager.get_guild(ctx)
+
+    if what in normal:
+        if database.get_cash(authorID) < amount:
+            await ctx.channel.send("you cant afford to deposit this amount!")
+        else:
+            database.give_cash(authorID, -amount)
+            api.guildManager.add_cash(guild, amount)
+            await ctx.channel.send("deposited " + str(amount) + " eggs into the guild bank")
+    elif what in silver:
+        if database.get_iron_cash(authorID) < amount:
+            await ctx.channel.send("you cant afford to deposit this amount!")
+        else:
+            database.give_iron_cash(authorID, -amount)
+            api.guildManager.add_ironcash(guild, amount)
+            await ctx.channel.send("deposited " + str(amount) + " silver eggs into the guild bank")
+    elif what in gold:
+        if database.get_gold_cash(authorID) < amount:
+            await ctx.channel.send("you cant afford to deposit this amount!")
+            return
+        else:
+            database.give_gold_cash(authorID, -amount)
+            api.guildManager.add_goldcash(guild, amount)
+            await ctx.channel.send("deposited " + str(amount) + " golden eggs into the guild bank")
+    else:
+        await ctx.channel.send("invalid egg type!")
+        return
+
+
+@guild.command("withdraw")
+async def withdraw(ctx, amount: int = 0, what: str = "eggs"):
+    guild = api.guildManager.get_guild(ctx)
+    if guild == "None":
+        await ctx.channel.send("you do not have a guild!")
+        return
+
+    authorID = ctx.author.id
+
+    if not api.guildManager.has_perms(authorID, guild) and not api.guildManager.is_guild_master(ctx):
+        await ctx.channel.send("you do not have permissions to withdraw from the guild bank!")
+        return
+
+    normal = ["eggs", "eggys", "egg", "eggy"]
+    silver = ["silver eggs", "silver_eggs", "silver eggys", "silver_eggy", "silver_egg"]
+    gold = ["gold eggs", "gold_eggs", "gold eggys", "gold_eggy", "gold_egg", "golden eggs", "golden_eggs",
+            "golden eggys", "goldeb_eggy", "goldeb_egg"]
+
+    if what in normal:
+        if api.guildManager.get_guild_cash(guild) < amount:
+            await ctx.channel.send("there are not enough eggs in the guild bank to withdraw this much!")
+        else:
+            database.give_cash(authorID, amount)
+            api.guildManager.add_cash(guild, -amount)
+            await ctx.channel.send("withdrew " + str(amount) + " eggs from the guild bank")
+    elif what in silver:
+        if api.guildManager.get_guild_ironcash(guild) < amount:
+            await ctx.channel.send("there are not enough silver eggs in the guild bank to withdraw this much!")
+        else:
+            database.give_iron_cash(authorID, amount)
+            api.guildManager.add_ironcash(guild, -amount)
+            await ctx.channel.send("withdrew " + str(amount) + " silver eggs from the guild bank")
+    elif what in gold:
+        if api.guildManager.get_guild_goldcash(guild) < amount:
+            await ctx.channel.send("there are not enough golden eggs in the guild bank to withdraw this much!")
+        else:
+            database.give_gold_cash(authorID, amount)
+            api.guildManager.add_goldcash(guild, -amount)
+            await ctx.channel.send("withdrew " + str(amount) + " golden eggs from the guild bank")
+    else:
+        await ctx.channel.send("invalid egg type!")
+        return
+
+
+@guild.command("join")
+async def guilds_join(ctx, guild: str = ""):
+    if api.guildManager.get_guild(ctx) != "None":
+        await ctx.channel.send("you already have a guild!")
+        return
+    if api.guildManager.get_guild_join_time(ctx.author.id) != 0:
+        await ctx.channel.send("you cannot join another guild yet! you have `" + api.guildManager.guild_join_time_left(
+            ctx.author.id) + "` until you can join a guild again")
+        return
+    if guild == "" or guild not in settings.guilds:
+        await ctx.channel.send("what guild would u like to join", view=guildButtons())
+        return
+
+    role = ctx.guild.get_role(settings.guilds[guild])
+    api.guildManager.set_guild_join_time(ctx.author.id, 604800)
+    await ctx.author.add_roles(role)
+    await ctx.channel.send(embed=create_embed("Joined", "Joined " + guild))
+
+
+@guild.command("leave")
+async def guilds_leave(ctx):
+    if api.guildManager.get_guild(ctx) == "None":
+        await ctx.channel.send("you dont have a guild!")
+        return
+
+    for guild in settings.guilds:
+        id = settings.guilds[guild]
+        role = ctx.guild.get_role(id)
+        if role in ctx.author.roles:
+            await ctx.author.remove_roles(role)
+            await ctx.channel.send(embed=create_embed("Left", "Left " + guild))
+            return
+
+    await ctx.channel.send("woops something went wrong")
+
+
+@guild.group(name="perms")
+async def guild_perms(ctx):
+    if ctx.invoked_subcommand is None:
+        if api.guildManager.is_guild_master(ctx):
+            await ctx.channel.send(embed=create_embed("add or remove?",
+                                                      "you can add or remove permissions using +guilds perms add or +guilds perms remove"))
+        else:
+            await ctx.channel.send("only the guild master can do this")
+
+
+@guild.command("test")
+async def guilds_test(ctx):
+    await ctx.channel.send(view=guildButtons())
+
+
+@guild_perms.command("add")
+async def guild_perms_add(ctx, who: discord.Member):
+    if not api.guildManager.is_guild_master(ctx):
+        await ctx.channel.send("only the guild master can do this")
+        return
+
+    if api.guildManager.has_perms(who.id, api.guildManager.get_guild(ctx)):
+        await ctx.channel.send("this user already has guild permissions!")
+        return
+
+    api.guildManager.give_perms(who.id, api.guildManager.get_guild(ctx))
+
+    await ctx.channel.send("successfully gave guild permissions!")
+
+
+@guild_perms.command("remove")
+async def guild_perms_remove(ctx, who: discord.Member):
+    if not api.guildManager.is_guild_master(ctx):
+        await ctx.channel.send("only the guild master can do this")
+        return
+
+    if not api.guildManager.has_perms(who.id, api.guildManager.get_guild(ctx)):
+        await ctx.channel.send("this user does not have guild permissions!")
+        return
+
+    api.guildManager.remove_perms(who.id, api.guildManager.get_guild(ctx))
+
+    await ctx.channel.send("successfully removed guild permissions!")
+
+
+@guild_perms.command("check")
+async def guild_perms_check(ctx):
+    if api.guildManager.get_guild(ctx) == "None":
+        await ctx.channel.send("you are not in a guild!")
+        return
+    if api.guildManager.has_perms(ctx.author.id, api.guildManager.get_guild(ctx)):
+        await ctx.channel.send("you have perms")
+    else:
+        await ctx.channel.send("you dont have perms")
+
+
+@guild.command("leaderboard")
+async def leaderboard(ctx):
+    board = api.guildManager.get_guild_leaderboard()
+    num1, value1 = board[0], api.guildManager.get_guild_worth(board[0])
+    num2, value2 = board[1], api.guildManager.get_guild_worth(board[1])
+    num3, value3 = board[2], api.guildManager.get_guild_worth(board[2])
+    num4, value4 = board[3], api.guildManager.get_guild_worth(board[3])
+
+    desc = "This is the current guild leaderboard:\n" \
+           "1. " + str(num1) + " (worth " + str(value1) + ")\n" \
+                                                          "2. " + str(num2) + " (worth " + str(value2) + ")\n" \
+                                                                                                         "3. " + str(
+        num3) + " (worth " + str(value3) + ")\n" \
+                                           "4. " + str(num4) + " (worth " + str(value4) + ")\n"
+
+    await ctx.channel.send(embed=create_embed("Guild Leaderboard", desc))
 
 
 @bot.command("pay", aliases=["give"])
@@ -717,7 +1433,7 @@ async def pay(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully paid {3} {0} {1} to {2}".format(amount, settings.cash_name, target,
-                                                                      settings.eggy_emoji)
+                                                                      settings.emojis["eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -730,7 +1446,7 @@ async def pay(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully payed {3} {0} {1} to {2}".format(amount, settings.iron_cash_name, target,
-                                                                       settings.silver_eggy_emoji)
+                                                                       settings.emojis["silver eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -743,7 +1459,7 @@ async def pay(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully payed {3} {0} {1} to {2}".format(amount, settings.gold_cash_name, target,
-                                                                       settings.golden_eggy_emoji)
+                                                                       settings.emojis["golden eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -756,7 +1472,7 @@ async def pay(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully payed {3} {0} {1} to {2}".format(amount, settings.yolk_cash_name, target,
-                                                                       settings.eggyolk_emoji)
+                                                                       settings.emojis["eggyolk"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -788,12 +1504,10 @@ async def inventory(ctx, person: discord.Member = None):
             title="{0}'s warehouse".format(person.name)
         )
 
-        egg_topper = database.get_inventory_amount(authorID, "egg_topper")
-        statue = database.get_inventory_amount(authorID, "eggcellent_statue")
-
         if authorID == 802159357306470430:
             emb.add_field(name="unlucky", value="you are just very unlucky")
 
+        """
         if database.has_inventory_item(authorID, "binoculars"):
             emb.add_field(name="Binoculars", value="You have the binoculars", inline=True)
         if database.has_inventory_item(authorID, "lucky drumstick"):
@@ -812,40 +1526,72 @@ async def inventory(ctx, person: discord.Member = None):
             emb.add_field(name="Eggcellent Statue", value="You have a eggcellent statue")
         elif statue >= 2:
             emb.add_field(name="Eggcellent Statue", value="You have {0} eggcellent statues".format(statue))
+        """
+
+        items = database.get_inventory_items(authorID)
+
+        singles = []
+        duplicates = {}
+
+        for item in items.keys():
+            amount = items[item]
+            if amount == 1:
+                singles.append(item)
+            else:
+                duplicates[item] = amount
+
+        for sitem in singles:
+            sitem = sitem.replace("_", " ")
+            emb.add_field(name=sitem, value="You have a " + sitem)
+
+        for ditem in duplicates.keys():
+            amount = duplicates[ditem]
+            ditem = ditem.replace("_", " ")
+            emb.add_field(name=ditem, value="You have " + str(amount) + " " + ditem + "s")
 
         await ctx.channel.send(embed=emb)
 
 
 @bot.command("profile", aliases=["prof"])
-async def profile(ctx, who: discord.Member=None):
+async def profile(ctx, who: discord.Member = None):
     await eggy_check(ctx, False)
-    if who == None:
+    if who is None:
         who = ctx.author
     authorID = who.id
     emb = discord.Embed(
         title=""
     )
 
-    emb.add_field(name="{0}Farm Level".format(settings.farm_emoji),
+    emb.add_field(name="{0}Farm Level".format(settings.emojis["farm"]),
                   value="You are currently farm level {0}".format(database.get_farm_level(authorID)),
                   inline=False)
 
     emb.add_field(name="Basket",
                   value="You currently have:" + "\n" +
                         "{2} {0} {1}".format(database.get_cash(authorID), settings.cash_name,
-                                             settings.eggy_emoji) + "\n" +
+                                             settings.emojis["eggy"]) + "\n" +
                         "{2} {0} {1}".format(database.get_iron_cash(authorID), settings.iron_cash_name,
-                                             settings.silver_eggy_emoji) + "\n" +
+                                             settings.emojis["silver eggy"]) + "\n" +
                         "{2} {0} {1}".format(database.get_gold_cash(authorID), settings.gold_cash_name,
-                                             settings.golden_eggy_emoji) + "\n" +
+                                             settings.emojis["golden eggy"]) + "\n" +
                         "{2} {0} {1}".format(database.get_eggyolks(authorID), settings.yolk_cash_name,
-                                             settings.eggyolk_emoji),
+                                             settings.emojis["eggyolk"]),
                   inline=False)
 
     if authorID == bot.author_id:
         emb.set_author(name="god's profile", url=None, icon_url=ctx.author.avatar)
     else:
         emb.set_author(name="{0}'s profile".format(ctx.author.name), url=None, icon_url=ctx.author.avatar)
+
+    boost_desc = ""
+
+    for boost in api.boostManager.get_active_boosts(authorID):
+        boost_desc = boost_desc + boost + " `" + api.boostManager.boost_time_left(authorID, boost) + "`\n"
+
+    if boost_desc != "":
+        emb.add_field(name="Active boosts", value=boost_desc, inline=False)
+    else:
+        emb.add_field(name="Active boosts", value="you have no active boosts!", inline=False)
 
     await ctx.channel.send(embed=emb)
 
@@ -860,7 +1606,7 @@ async def nick(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully nicked {3} {0} {1} from {2}".format(amount, settings.cash_name, target,
-                                                                          settings.eggy_emoji)
+                                                                          settings.emojis["eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -873,7 +1619,7 @@ async def nick(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully nicked {3} {0} {1} from {2}".format(amount, settings.iron_cash_name, target,
-                                                                          settings.silver_eggy_emoji)
+                                                                          settings.emojis["silver eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -886,7 +1632,7 @@ async def nick(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully nicked {3} {0} {1} from {2}".format(amount, settings.gold_cash_name, target,
-                                                                          settings.golden_eggy_emoji)
+                                                                          settings.emojis["golden eggy"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -899,7 +1645,7 @@ async def nick(ctx, target: discord.Member, amount: int, what):
         emb = discord.Embed(
             title="success",
             description="successfully nicked {3} {0} {1} from {2}".format(amount, settings.yolk_cash_name, target,
-                                                                          settings.eggyolk_emoji)
+                                                                          settings.emojis["eggyolk"])
         )
 
         emb.set_author(name="Egg Basket",
@@ -937,7 +1683,10 @@ async def hunt(ctx):
         elif flevel == 5:
             rolled_eggs = random.randint(settings.level_5_farm_min, settings.level_5_farm_max)
 
-        if database.has_inventory_item(ctx.author.id, "binoculars"):
+        #        if database.has_inventory_item(ctx.author.id, "binoculars"):
+        #            rolled_eggs = rolled_eggs * 2
+
+        if database.has_boost_active(ctx.author.id, "binoculars"):
             rolled_eggs = rolled_eggs * 2
 
         database.give_cash(ctx.author.id, rolled_eggs)
@@ -945,7 +1694,7 @@ async def hunt(ctx):
         emb = discord.Embed(
             title="Found some {0}".format(settings.cash_name),
             description="You found {0} {3} {1} {2}".format(rolled_eggs, settings.cash_name, rolled_place,
-                                                           settings.eggy_emoji)
+                                                           settings.emojis["eggy"])
         )
 
         await ctx.send(embed=emb)
@@ -982,8 +1731,12 @@ async def dupe(ctx, amount: str | int = 1):
         return
     rolled = random.randint(1, 100)
     if rolled <= settings.dupe_chance:
-        if database.has_inventory_item(authorID, "jackpot"):
+        #        if database.has_inventory_item(authorID, "jackpot"):
+        #            amount = int(round(amount * 1.5))
+
+        if database.has_boost_active(authorID, "jackpot"):
             amount = int(round(amount * 1.5))
+
         database.give_cash(authorID, amount)
         await ctx.channel.send("you successfully duplicated {0} {1}".format(amount, settings.cash_name))
     else:
@@ -1020,6 +1773,7 @@ async def dig(ctx):
     if database.has_inventory_item(authorID, "delicate_shovel") or database.has_inventory_item(authorID,
                                                                                                "golden_shovel"):
         flevel = database.get_farm_level(authorID)
+        rolled = 0
         if flevel == 1:
             rolled = random.randint(settings.level_1_farm_min - 1, settings.level_1_farm_max - 1)
         elif flevel == 2:
@@ -1152,14 +1906,18 @@ async def bargain(ctx, amount: int):
         if profit == amount:
             await ctx.channel.send(embed=create_embed("nothing", "you didn't manage to bargain for your eggs"))
         elif profit > amount:
+            #            if database.has_inventory_item(authorID, "jackpot"):
+            #                profit = int(round(profit * 1.5))
+
             if database.has_inventory_item(authorID, "jackpot"):
-                profit = int(round(profit * 1.5))
+                profit = int(round(profit * 1.5, 0))
+
             await ctx.channel.send(embed=create_embed("profit",
                                                       f"you bargained your {amount} eggs for {profit} eggs"
                                                       f" (you got {(profit - amount)} eggs)"))
             database.give_cash(authorID, (profit - amount))
         elif profit < amount:
-            await ctx.channel.send(embed=create_embed("profit",
+            await ctx.channel.send(embed=create_embed("loss",
                                                       f"you bargained your {amount} eggs for {profit} eggs"
                                                       f" (you lost {(amount - profit)} eggs)"))
             database.give_cash(authorID, (amount - profit))
@@ -1168,6 +1926,30 @@ async def bargain(ctx, amount: int):
 @bargain.error
 async def bargain_error(ctx, error):
     await error_handling(ctx, error, "bargain")
+
+
+@bot.command("use", aliases=["use_boost"])
+async def use(ctx, boost):
+    await eggy_check(ctx, False)
+    authorID = ctx.author.id
+
+    if not database.has_inventory_item(authorID, boost):
+        await ctx.channel.send("you do not own this boost!")
+        return
+
+    if settings.object_types[boost] is None:
+        await ctx.channel.send("this boost does not exist!")
+        return
+
+    if settings.object_types[boost] != "boost":
+        await ctx.channel.send("this item is not a boost!")
+        return
+
+    database.activate_boost(authorID, boost)
+
+    emb = create_embed("boosted", "activated your " + boost + "!\nit will last for 2 hours")
+
+    await ctx.channel.send(embed=emb)
 
 
 async def error_handling(ctx, error, command):
@@ -1183,7 +1965,8 @@ async def error_handling(ctx, error, command):
         elif command == "buy":
             await ctx.channel.send("missing required argument! {0}buy (item)".format(settings.bot_prefix))
         elif command == "pay":
-            await ctx.channel.send("missing required argument! {0}pay (target) (amount) (what)".format(settings.bot_prefix))
+            await ctx.channel.send(
+                "missing required argument! {0}pay (target) (amount) (what)".format(settings.bot_prefix))
         elif command == "bargain":
             await ctx.channel.send("missing required argument! {0}bargain (amount)".format(settings.bot_prefix))
     elif isinstance(error, commands.ConversionError):
@@ -1219,31 +2002,37 @@ async def eggy_check(ctx, chatted: bool):
         if has_a_chance:
             silver = (random.randint(1, 2) == 1)
             rolled = random.randint(1, 100)
-            if database.has_inventory_item(authorID, "lucky_drumstick"):
+            #            if database.has_inventory_item(authorID, "lucky_drumstick"):
+            #                rolled *= 1.5
+            #                if rolled > 100:
+            #                    rolled = 100
+
+            if database.has_boost_active(authorID, "lucky_drumstick"):
                 rolled *= 1.5
                 if rolled > 100:
                     rolled = 100
+
             silver_chance = 20 + (20 * (flevel - 2))
             silver_double_chance = 10 + (10 * (flevel - 2))
             gold_chance = 25 + (25 * (flevel - 3))
             can_get_gold = False
-            if not chatted and gold_chance <= rolled:
+            if chatted == False and gold_chance <= rolled:
                 can_get_gold = True
-            else:
-                if chatted and flevel == 5 and gold_chance <= rolled:
-                    can_get_gold = True
+            elif chatted == True and gold_chance <= rolled and flevel == 5:
+                can_get_gold = True
+
             if silver and silver_chance <= rolled:
                 amount_of_eggs = 1
                 if silver_double_chance <= random.randint(1, 100):
                     amount_of_eggs = 2
 
                 emb = create_embed("you found a silver egg", "you found {2} {0} {1}"
-                                   .format(amount_of_eggs, settings.iron_cash_name, settings.silver_eggy_emoji))
+                                   .format(amount_of_eggs, settings.iron_cash_name, settings.emojis["silver eggy"]))
                 database.give_iron_cash(authorID, amount_of_eggs)
                 await ctx.channel.send(embed=emb)
             elif can_get_gold:
                 emb = create_embed("you found a gold egg", "you found {1} 1 {0}"
-                                   .format(settings.gold_cash_name, settings.golden_eggy_emoji))
+                                   .format(settings.gold_cash_name, settings.emojis["golden eggy"]))
                 database.give_gold_cash(authorID, 1)
                 await ctx.channel.send(embed=emb)
 
@@ -1251,16 +2040,16 @@ async def eggy_check(ctx, chatted: bool):
 @bot.command("test_emojis")
 @commands.has_role(863434428570796043)
 async def test_emojis(ctx):
-    await ctx.channel.send(settings.farm_emoji
-                           + "," + settings.eggy_emoji
-                           + "," + settings.eggyolk_emoji
-                           + "," + settings.golden_eggy_emoji
-                           + "," + settings.silver_eggy_emoji
-                           + "," + settings.binoculars_emoji
-                           + "," + settings.chicken_emoji
-                           + "," + settings.drumstick_emoji
-                           + "," + settings.shovel_emoji
-                           + "," + settings.topper_emoji
+    await ctx.channel.send(settings.emojis["farm"]
+                           + "," + settings.emojis["eggy"]
+                           + "," + settings.emojis["eggyolk"]
+                           + "," + settings.emojis["golden eggy"]
+                           + "," + settings.emojis["silver eggy"]
+                           + "," + settings.emojis["binoculars"]
+                           + "," + settings.emojis["golden chicken"]
+                           + "," + settings.emojis["lucky drumstick"]
+                           + "," + settings.emojis["delicate shovel"]
+                           + "," + settings.emojis["egg topper"]
                            )
     time.sleep(2.5)
     await ctx.channel.purge(limit=2)
@@ -1272,7 +2061,7 @@ async def test_emojis_error(ctx, error):
         await ctx.channel.send("https://tenor.com/view/no-nope-non-rick-rick-and-morty-gif-20999440")
 
 
-def create_embed(title: str, description: str = "") -> discord.Embed:
+def create_embed(title: str | None, description: str = "") -> discord.Embed:
     return discord.Embed(
         title=title, description=description
     )
@@ -1302,6 +2091,8 @@ def backup_database():
         shutil.copy(src_file, dst_file)
 
 
+token = None
+
 if not os.path.exists("./backups"):
     os.mkdir("./backups")
 
@@ -1310,11 +2101,19 @@ if os.path.exists("./token.txt"):
         lines = f.readlines()
         token = lines[0]
         print("loaded token from token.txt")
+
+if token is None:
+    print("no token!")
 else:
-    token = os.getenv("TOKEN")
-    keep_alive()  # Starts a webserver to be pinged.
-    print("loaded token from os secrets")
+    backup_database()
 
-backup_database()
+    threading.Thread(target=api.boostManager.start).start()
+    threading.Thread(target=api.guildManager.start).start()
 
-bot.run(token)  # Starts the bot
+    api.guildManager.setup_guilds()
+    bot.run(token)  # Starts the bot
+
+    print("attempting shutdown (may take up to a few minutes due to threads)")
+
+    api.boostManager.kill_threads = True
+    api.guildManager.kill_threads = True
