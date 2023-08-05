@@ -2017,9 +2017,9 @@ async def eggy_check(ctx, chatted: bool):
             silver_double_chance = 10 + (10 * (flevel - 2))
             gold_chance = 25 + (25 * (flevel - 3))
             can_get_gold = False
-            if chatted == False and gold_chance <= rolled:
+            if chatted is False and gold_chance <= rolled:
                 can_get_gold = True
-            elif chatted == True and gold_chance <= rolled and flevel == 5:
+            elif chatted is True and gold_chance <= rolled and flevel == 5:
                 can_get_gold = True
 
             if silver and silver_chance <= rolled:
@@ -2121,3 +2121,4 @@ else:
 
     api.boostManager.kill_threads = True
     api.guildManager.kill_threads = True
+    database.db.close()

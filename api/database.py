@@ -1,13 +1,13 @@
 import sqlite3
+from typing import Dict, Any
 
-import api.boostManager
 import settings
 from api.boostManager import get_active_boosts
+from main import database
 
 
 def get_db_value(filename, id: int, value_name: str):
-    db = sqlite3.connect(f"main.sqlite")
-    cursor = db.cursor()
+    cursor = database.db.cursor()
 
     cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
     bal = cursor.fetchone()
@@ -20,8 +20,7 @@ def get_db_value(filename, id: int, value_name: str):
 
 
 def set_db_value(filename: str, id: int, value_name: str, value):
-    db = sqlite3.connect(f"main.sqlite")
-    cursor = db.cursor()
+    cursor = database.db.cursor()
 
     cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
     cash = cursor.fetchone()
@@ -35,14 +34,12 @@ def set_db_value(filename: str, id: int, value_name: str, value):
     val = (value, id)
     cursor.execute(sql, val)
 
-    db.commit()
+    database.db.commit()
     cursor.close()
-    db.close()
 
 
-def get_table_collums(filename:str) -> list:
-    db = sqlite3.connect('main.sqlite')
-    cursor = db.execute(f'SELECT * FROM {filename}')
+def get_table_collums(filename: str) -> list:
+    cursor = database.db.execute(f'SELECT * FROM {filename}')
 
     names = list(map(lambda x: x[0], cursor.description))
 
@@ -52,10 +49,11 @@ def get_table_collums(filename:str) -> list:
 
     return names
 
+
 class Database:
     def __init__(self):
-        db = sqlite3.connect(f"main.sqlite")
-        cursor = db.cursor()
+        self.db = sqlite3.connect(f"main.sqlite")
+        cursor = self.db.cursor()
         self.file_name = "main"
         cursor.execute(f'''CREATE TABLE IF NOT EXISTS main (
             id INTEGER, cash INTEGER, farm_level INTEGER, ironcash INTEGER, goldcash INTEGER, eggyolks INTEGER, timeuntilguildjoin INTEGER
@@ -80,23 +78,20 @@ class Database:
     def wipe_database(self, confirmCode: int):
         if confirmCode != 1058945:
             return
-        db = sqlite3.connect(f"{self.file_name}.sqlite")
-        cursor = db.cursor()
+        cursor = self.db.cursor()
 
         cursor.execute(f"DELETE FROM main")
         cursor.execute(f"DELETE FROM inventory")
         cursor.execute(f"DELETE FROM boosts")
         cursor.execute(f"DELETE FROM guilds")
 
-        db.commit()
+        self.db.commit()
         cursor.close()
-        db.close()
 
         print("Database wiped.")
 
-    def add_user(self, id:int):
-        db = sqlite3.connect(f"{self.file_name}.sqlite")
-        cursor = db.cursor()
+    def add_user(self, id: int):
+        cursor = self.db.cursor()
         cursor.execute(f"SELECT id FROM {self.file_name} WHERE id = {id}")
         result = cursor.fetchone()
         cursor.execute(f"SELECT id FROM inventory WHERE id = {id}")
@@ -104,7 +99,8 @@ class Database:
         cursor.execute(f"SELECT id FROM boosts WHERE id = {id}")
         result3 = cursor.fetchone()
         if result is None:
-            sql_1 = ("INSERT INTO main(id, cash, farm_level, ironcash, goldcash, eggyolks, timeuntilguildjoin) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            sql_1 = (
+                "INSERT INTO main(id, cash, farm_level, ironcash, goldcash, eggyolks, timeuntilguildjoin) VALUES (?, ?, ?, ?, ?, ?, ?)")
             val_1 = (id, settings.default_cash, 1, 0, 0, 0, 0)
             cursor.execute(sql_1, val_1)
         if result2 is None:
@@ -115,21 +111,20 @@ class Database:
             val_2 = (id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             cursor.execute(sql_2, val_2)
         if result3 is None:
-            sql_3 = ("INSERT INTO boosts(id, binoculars, lucky_drumstick, golden_chicken, jackpot) VALUES (?, ?, ?, ?, ?)")
+            sql_3 = (
+                "INSERT INTO boosts(id, binoculars, lucky_drumstick, golden_chicken, jackpot) VALUES (?, ?, ?, ?, ?)")
             val_3 = (id, 0, 0, 0, 0)
             cursor.execute(sql_3, val_3)
 
-
-        db.commit()
+        self.db.commit()
         cursor.close()
-        db.close()
 
-    def get_cash(self, id:int):
+    def get_cash(self, id: int):
         self.add_user(id)
 
         return get_db_value("main", id, "cash")
 
-    def give_cash(self, id:int, amount:int):
+    def give_cash(self, id: int, amount: int):
         self.add_user(id)
 
         old = get_db_value("main", id, "cash")
@@ -240,17 +235,17 @@ class Database:
     def is_inventory_empty(self, id: int) -> bool:
         self.add_user(id)
 
-        db = sqlite3.connect(f"{self.file_name}.sqlite")
-        cursor = db.cursor()
+        cursor = self.db.cursor()
 
-        cursor.execute(f"SELECT SUM(binoculars) + SUM(lucky_drumstick) + SUM(golden_chicken) + SUM(eggcellent_statue) + SUM(delicate_shovel) + SUM(egg_topper) + SUM(golden_shovel) + SUM(jackpot) + SUM(custom_role) + SUM(custom_channel) + SUM(dev_crown) AS total_items FROM inventory WHERE id = {id}")
+        cursor.execute(
+            f"SELECT SUM(binoculars) + SUM(lucky_drumstick) + SUM(golden_chicken) + SUM(eggcellent_statue) + SUM(delicate_shovel) + SUM(egg_topper) + SUM(golden_shovel) + SUM(jackpot) + SUM(custom_role) + SUM(custom_channel) + SUM(dev_crown) AS total_items FROM inventory WHERE id = {id}")
 
         total_items = cursor.fetchone()[0]
         total_items = total_items if total_items else 0
 
         return total_items == 0
 
-    def get_inventory_items(self, id: int) -> list:
+    def get_inventory_items(self, id: int) -> dict[Any, int]:
         items = {}
 
         for item in get_table_collums("inventory"):
@@ -276,5 +271,3 @@ class Database:
             self.remove_inventory_item(id, boost, 1)
 
         print(f"{id} activated the {boost} boost")
-
-
