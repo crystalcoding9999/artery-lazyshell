@@ -3,11 +3,11 @@ from typing import Dict, Any
 
 import settings
 from api.boostManager import get_active_boosts
-from main import database
 
 
 def get_db_value(filename, id: int, value_name: str):
-    cursor = database.db.cursor()
+    db = sqlite3.connect("main.sqlite")
+    cursor = db.cursor()
 
     cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
     bal = cursor.fetchone()
@@ -20,7 +20,8 @@ def get_db_value(filename, id: int, value_name: str):
 
 
 def set_db_value(filename: str, id: int, value_name: str, value):
-    cursor = database.db.cursor()
+    db = sqlite3.connect("main.sqlite")
+    cursor = db.cursor()
 
     cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
     cash = cursor.fetchone()
@@ -34,26 +35,29 @@ def set_db_value(filename: str, id: int, value_name: str, value):
     val = (value, id)
     cursor.execute(sql, val)
 
-    database.db.commit()
+    db.commit()
     cursor.close()
+    db.close()
 
 
 def get_table_collums(filename: str) -> list:
-    cursor = database.db.execute(f'SELECT * FROM {filename}')
+    db = sqlite3.connect("main.sqlite")
+    cursor = db.execute(f'SELECT * FROM {filename}')
 
     names = list(map(lambda x: x[0], cursor.description))
 
     names.remove("id")
 
     cursor.close()
+    db.close()
 
     return names
 
 
 class Database:
     def __init__(self):
-        self.db = sqlite3.connect(f"main.sqlite")
-        cursor = self.db.cursor()
+        db = sqlite3.connect(f"main.sqlite")
+        cursor = db.cursor()
         self.file_name = "main"
         cursor.execute(f'''CREATE TABLE IF NOT EXISTS main (
             id INTEGER, cash INTEGER, farm_level INTEGER, ironcash INTEGER, goldcash INTEGER, eggyolks INTEGER, timeuntilguildjoin INTEGER
@@ -78,7 +82,8 @@ class Database:
     def wipe_database(self, confirmCode: int):
         if confirmCode != 1058945:
             return
-        cursor = self.db.cursor()
+        db = sqlite3.connect("main.sqlite")
+        cursor = db.cursor()
 
         cursor.execute(f"DELETE FROM main")
         cursor.execute(f"DELETE FROM inventory")
@@ -91,7 +96,8 @@ class Database:
         print("Database wiped.")
 
     def add_user(self, id: int):
-        cursor = self.db.cursor()
+        db = sqlite3.connect("main.sqlite")
+        cursor = db.cursor()
         cursor.execute(f"SELECT id FROM {self.file_name} WHERE id = {id}")
         result = cursor.fetchone()
         cursor.execute(f"SELECT id FROM inventory WHERE id = {id}")
@@ -116,8 +122,9 @@ class Database:
             val_3 = (id, 0, 0, 0, 0)
             cursor.execute(sql_3, val_3)
 
-        self.db.commit()
+        db.commit()
         cursor.close()
+        db.close()
 
     def get_cash(self, id: int):
         self.add_user(id)
@@ -235,7 +242,8 @@ class Database:
     def is_inventory_empty(self, id: int) -> bool:
         self.add_user(id)
 
-        cursor = self.db.cursor()
+        db = sqlite3.connect("main.sqlite")
+        cursor = db.cursor()
 
         cursor.execute(
             f"SELECT SUM(binoculars) + SUM(lucky_drumstick) + SUM(golden_chicken) + SUM(eggcellent_statue) + SUM(delicate_shovel) + SUM(egg_topper) + SUM(golden_shovel) + SUM(jackpot) + SUM(custom_role) + SUM(custom_channel) + SUM(dev_crown) AS total_items FROM inventory WHERE id = {id}")
