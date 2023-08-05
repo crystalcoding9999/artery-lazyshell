@@ -11,6 +11,7 @@ import api.boostManager
 import settings
 from api import Database
 import threading
+from keep_alive import keep_alive
 
 inte = discord.Intents.default()
 inte.messages = True
@@ -2101,12 +2102,15 @@ if os.path.exists("./token.txt"):
         lines = f.readlines()
         token = lines[0]
         print("loaded token from token.txt")
+else:
+    token = os.environ['TOKEN']
 
 if token is None:
     print("no token!")
 else:
     backup_database()
 
+    keep_alive()
     threading.Thread(target=api.boostManager.start).start()
     threading.Thread(target=api.guildManager.start).start()
 
