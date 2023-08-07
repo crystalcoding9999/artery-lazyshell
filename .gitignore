@@ -5,3 +5,5 @@
 /backups
 /venv
 /api/petManager.py
+/.replit
+/replit.nix
