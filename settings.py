@@ -1,5 +1,3 @@
-import api.boostManager
-
 bot_prefix = "dev+"
 default_cash = 0
 cash_name = "eggs"
@@ -25,8 +23,11 @@ hunt_cooldown = 20
 hunt_chance = 50
 hunt_locations = ["in a bush", "near the river", "in a barn"]
 
-dupe_cooldown = 20
+dupe_cooldown = 5
 dupe_chance = 50
+
+bargain_cooldown = 5
+bargain_chance = 80
 
 dig_cooldown = 20
 explore_cooldown = 20

@@ -11,6 +11,8 @@ import api.boostManager
 import settings
 from api import Database
 import threading
+
+from api.database import has_boost_active
 from keep_alive import keep_alive
 
 inte = discord.Intents.default()
@@ -199,11 +201,11 @@ async def help_guilds(ctx, page: int = 1):
                "**Guild Perms Check**\nSee if you have guild permissions\n\n" \
                "**Guild Leaderboard**\npretty self explanatory"
 
-    if page == 2 and api.guildManager.is_guild_master(ctx) is True and ctx.guild.get_role(settings.guildMasterRole) in ctx.author.roles:
+    if page == 2 and api.guildManager.is_guild_master(ctx) is True and ctx.guild.get_role(
+            settings.guildMasterRole) in ctx.author.roles:
         desc = desc + "\n\n" \
                       "**Guild Perms Add**\nAdd guild permissions to a user\n\n" \
                       "**Guild Perms Remove**\nRemove guild permissions from a user"
-
 
     emb.description = desc
     await ctx.channel.send(embed=emb)
@@ -1687,7 +1689,7 @@ async def hunt(ctx):
         #        if database.has_inventory_item(ctx.author.id, "binoculars"):
         #            rolled_eggs = rolled_eggs * 2
 
-        if database.has_boost_active(ctx.author.id, "binoculars"):
+        if has_boost_active(ctx.author.id, "binoculars"):
             rolled_eggs = rolled_eggs * 2
 
         database.give_cash(ctx.author.id, rolled_eggs)
@@ -1709,6 +1711,7 @@ async def hunt_error(ctx, error):
 
 
 @bot.command("dupe", aliases=["duplicate"])
+@commands.cooldown(1, settings.dupe_cooldown, commands.BucketType.user)
 async def dupe(ctx, amount: str | int = 1):
     await eggy_check(ctx, False)
     max_eggs = 25 + (25 * database.get_farm_level(ctx.author.id))
@@ -1735,7 +1738,7 @@ async def dupe(ctx, amount: str | int = 1):
         #        if database.has_inventory_item(authorID, "jackpot"):
         #            amount = int(round(amount * 1.5))
 
-        if database.has_boost_active(authorID, "jackpot"):
+        if has_boost_active(authorID, "jackpot"):
             amount = int(round(amount * 1.5))
 
         database.give_cash(authorID, amount)
@@ -1844,10 +1847,10 @@ async def explore_error(ctx, error):
 
 
 @bot.command("bargain", aliases=["ba"])
-@commands.cooldown(1, 10, commands.BucketType.user)
+@commands.cooldown(1, settings.bargain_cooldown, commands.BucketType.user)
 async def bargain(ctx, amount: int):
     await eggy_check(ctx, False)
-    rolled = random.randint(1, 2)
+    rolled = random.randint(1, 100)
     authorID = ctx.author.id
 
     flevel = database.get_farm_level(authorID)
@@ -1900,17 +1903,12 @@ async def bargain(ctx, amount: int):
 
     if database.get_cash(authorID) < amount:
         await ctx.channel.send(embed=create_embed("nothing", "you don't have enough eggs to bargain"))
-    elif rolled == 1:
-        await ctx.channel.send(embed=create_embed("nothing", "you haven't gained or lost anything from your bargain"))
-    elif rolled == 2:
+    elif rolled <= settings.bargain_cooldown:
         profit = random.randint(eggs_min, eggs_max)
         if profit == amount:
             await ctx.channel.send(embed=create_embed("nothing", "you didn't manage to bargain for your eggs"))
         elif profit > amount:
-            #            if database.has_inventory_item(authorID, "jackpot"):
-            #                profit = int(round(profit * 1.5))
-
-            if database.has_inventory_item(authorID, "jackpot"):
+            if has_boost_active(authorID, "jackpot"):
                 profit = int(round(profit * 1.5, 0))
 
             await ctx.channel.send(embed=create_embed("profit",
@@ -1922,6 +1920,8 @@ async def bargain(ctx, amount: int):
                                                       f"you bargained your {amount} eggs for {profit} eggs"
                                                       f" (you lost {(amount - profit)} eggs)"))
             database.give_cash(authorID, (amount - profit))
+    else:
+        await ctx.channel.send(embed=create_embed("nothing", "you didn't manage to bargain for your eggs"))
 
 
 @bargain.error
@@ -1959,8 +1959,8 @@ async def error_handling(ctx, error, command):
     elif isinstance(error, commands.MissingRequiredArgument):
         if command == "announce":
             await ctx.channel.send(
-                "missing required argument! {0}announce (title)|(announcement)|(?banner). yes the '|' is neccesary".format(
-                    settings.bot_prefix))
+                "missing required argument! {0}announce (title)|(announcement)|(?banner). yes the '|' is necessary"
+                .format(settings.bot_prefix))
         elif command == "transfer":
             await ctx.channel.send("missing required argument! {0}share (target) (amount)".format(settings.bot_prefix))
         elif command == "buy":
@@ -2008,7 +2008,7 @@ async def eggy_check(ctx, chatted: bool):
             #                if rolled > 100:
             #                    rolled = 100
 
-            if database.has_boost_active(authorID, "lucky_drumstick"):
+            if has_boost_active(authorID, "lucky_drumstick"):
                 rolled *= 1.5
                 if rolled > 100:
                     rolled = 100

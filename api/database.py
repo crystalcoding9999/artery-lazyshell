@@ -54,6 +54,10 @@ def get_table_collums(filename: str) -> list:
     return names
 
 
+def has_boost_active(id: int, boost: str) -> bool:
+    return boost in get_active_boosts(id)
+
+
 class Database:
     def __init__(self):
         db = sqlite3.connect(f"main.sqlite")
@@ -261,9 +265,6 @@ class Database:
                 items[item] = self.get_inventory_amount(id, item)
 
         return items
-
-    def has_boost_active(self, id: int, boost: str) -> bool:
-        return boost in get_active_boosts(id)
 
     def activate_boost(self, id: int, boost: str):
         self.add_user(id)
