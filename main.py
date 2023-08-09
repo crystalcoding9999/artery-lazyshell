@@ -8,12 +8,12 @@ import discord
 from discord.ext import commands
 
 import api.boostManager
-import settings
+from settings import settings
 from api import Database
 import threading
 
 from api.database import has_boost_active
-from keep_alive import keep_alive
+from dashboard import start
 
 inte = discord.Intents.default()
 inte.messages = True
@@ -2110,7 +2110,7 @@ if token is None:
 else:
     backup_database()
 
-    keep_alive()
+    start()
     threading.Thread(target=api.boostManager.start).start()
     threading.Thread(target=api.guildManager.start).start()
 
@@ -2121,4 +2121,4 @@ else:
 
     api.boostManager.kill_threads = True
     api.guildManager.kill_threads = True
-    database.db.close()
+    settings.save_to_json()
