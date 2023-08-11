@@ -5,5 +5,8 @@
 /backups
 /venv
 /api/petManager.py
+/test.py
+/bot_config.json
+/.gitignore
 /.replit
 /replit.nix

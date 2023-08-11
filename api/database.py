@@ -1,22 +1,28 @@
 import sqlite3
-from typing import Dict, Any
+from typing import Any
 
-import settings
 from api.boostManager import get_active_boosts
+from settingsClass import settings
 
 
 def get_db_value(filename, id: int, value_name: str):
-    db = sqlite3.connect("main.sqlite")
-    cursor = db.cursor()
-
-    cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
-    bal = cursor.fetchone()
     try:
-        cash = bal[0]
-    except:
-        cash = 0
+        db = sqlite3.connect("main.sqlite")
+        cursor = db.cursor()
 
-    return cash
+        cursor.execute(f"SELECT {value_name} FROM {filename} WHERE id = {id}")
+        bal = cursor.fetchone()
+
+        try:
+            cash = bal[0]
+        except:
+            cash = 0
+
+        return cash
+    except sqlite3.OperationalError:
+        return 0
+
+    return 0
 
 
 def set_db_value(filename: str, id: int, value_name: str, value):
@@ -56,6 +62,83 @@ def get_table_collums(filename: str) -> list:
 
 def has_boost_active(id: int, boost: str) -> bool:
     return boost in get_active_boosts(id)
+
+
+def id_to_object(obj_id: int) -> str | None:
+    for value in settings.object_ids:
+        if int(settings.object_ids[value]) == obj_id:
+            return value
+
+    return None
+
+
+def buy_item(id: int, itemID) -> bool:
+    if not can_afford(id, itemID):
+        return False
+
+    item = id_to_object(itemID)
+    if item is None:
+        item = itemID
+    cost = int(settings.object_costs[item])
+    egg_type = settings.object_egg_types[item]
+
+    if egg_type == "":
+        old = int(get_db_value("main", id, "cash"))
+        new = old - cost
+        set_db_value("main", id, "cash", new)
+    elif egg_type == "silver":
+        old = int(get_db_value("main", id, "ironcash"))
+        new = old - cost
+        set_db_value("main", id, "ironcash", new)
+    elif egg_type == "gold":
+        old = int(get_db_value("main", id, "goldcash"))
+        new = old - cost
+        set_db_value("main", id, "goldcash", new)
+    else:
+        return False
+
+    if not item.startswith("farm"):
+        set_db_value("inventory", id, item.replace(' ', '_'), int(get_db_value("inventory", id, item.replace(' ', '_'))) + 1)
+    else:
+        set_db_value("main", id, "farm_level", int(get_db_value("main", id, "farm_level")) + 1)
+
+    return True
+
+
+def can_afford(id: int, itemID) -> bool:
+    if isinstance(itemID, int):
+        item = id_to_object(itemID)
+    else:
+        item = itemID
+    cost = settings.object_costs[item]
+    egg_type = settings.object_egg_types[item]
+    if egg_type == "":
+        afford = False
+        cash = get_db_value("main", id, "cash")
+        if int(cash) >= int(cost):
+            afford = True
+        else:
+            afford = False
+        return afford
+    elif egg_type == "silver":
+        afford = False
+        cash = get_db_value("main", id, "ironcash")
+        if int(cash) >= int(cost):
+            afford = True
+        else:
+            afford = False
+        return afford
+    elif egg_type == "gold":
+        afford = False
+        cash = get_db_value("main", id, "goldcash")
+        if int(cash) >= int(cost):
+            afford = True
+        else:
+            afford = False
+        return afford
+
+    print("4.3.2")
+    return False
 
 
 class Database:

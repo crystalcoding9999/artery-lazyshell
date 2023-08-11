@@ -1,3 +1,3 @@
-import dashboard
+from api.database import *
 
-dashboard.start_dashboard()
+print(buy_item(0, "farm_4"))
