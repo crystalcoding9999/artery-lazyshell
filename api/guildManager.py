@@ -4,7 +4,7 @@ from time import sleep as wait
 from threading import Thread
 import datetime
 
-import settings
+import settingsClass
 
 
 def get_db_value(guild: str, value_name: str):

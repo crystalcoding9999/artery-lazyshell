@@ -1,6 +1,6 @@
 from threading import Thread
 from flask import Flask, render_template, request, session, redirect, jsonify, url_for, abort
-from settings import settings
+from settingsClass import settings
 import os
 import dashboard_settings
 import json
@@ -55,53 +55,13 @@ def update_settings(code):
 
     try:
         data = request.json  # Get the JSON data from the request
-        print(data)
 
-        list_updates = []
-        dict_updates = []
-        common_updates = {}
-
-        # Separate list/dict updates from common updates
-        for item in data:
-            if item.startswith("list|||"):
-                list_updates.append(item)
-            elif item.startswith("dict|||"):
-                dict_updates.append(item)
-            else:
-                common_updates[item] = data[item]
-
-        # Update common settings
-        settings.update_settings(common_updates)
-
-        # Update list values
-        for list_item in list_updates:
-            parts = list_item.split("|||")
-            if len(parts) != 3:
-                return jsonify({'error': 'Invalid data format'}), 400
-
-            category, index, value = parts[1], parts[2], data[list_item]
-            if value == "deleted":
-                settings.delete_list_item(category, int(index))
-            else:
-                settings.update_list(category, int(index), value)
-
-        # Update dict values
-        for dict_item in dict_updates:
-            parts = dict_item.split("|||")
-            if len(parts) != 4:
-                return jsonify({'error': 'Invalid data format'}), 400
-
-            category, value_name, value = parts[1], parts[2], data[dict_item]
-            if value == "deleted":
-                settings.delete_dict_value(category, value_name)
-            else:
-                settings.update_dict(category, value_name, value)
+        settings.update_settings(data)
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
     return jsonify({'title': 'success'}), 200
-
 
 
 @app.route('/api/settings/set/<code>/<setting>/<value>', methods=["POST"])

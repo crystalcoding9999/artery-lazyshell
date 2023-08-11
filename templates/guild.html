@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!--suppress XmlDuplicatedId -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,81 +10,180 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css">
     <link rel="icon" href="https://cdn.discordapp.com/icons/{{guild['id']}}/{{guild['icon']}}.png">
     <style>
+        body {
+            background-color: #ffb244;
+        }
         li {
             list-style-type: none;
+        }
+
+        .container {
+            background-color: rgb(216, 150, 57);
+            border-radius: 50px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 0 18px;
+            display: none;
+            overflow: hidden;
+            background-color: rgb(202, 140, 53);
+            border-radius: 25px;
+        }
+
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Modal Content */
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 25px;
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaaaaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
+    <!--suppress XmlDuplicatedId -->
+    <!--please dont make fun of me - @crystalcoding_ -->
     <div class="container text-center">
+        <br>
         <div class="mt-4">
-            <button type="button" class="btn btn-outline-success" id="save-button" onclick="saveSettings()">Save</button>
-            <button type="button" class="btn btn-outline-danger" onclick="window.location.reload()">Reset</button>
+            <button type="button" class="btn btn-success" id="save-button" onclick="saveSettings()">Save</button>
+            <button type="button" class="btn btn-danger" onclick="window.location.reload()">Reset</button>
         </div>
 
         <h1 class="mt-3">Settings for: {{ guild['name'] }}</h1>
 
         <form id="settings-form">
             {% for category in categories %}
-                <h3>{{ category }}</h3>
-                <ul>
-                {% for item, itmcategory in settings %}
-                    {% if itmcategory == category %}
-                        <li>
-                            <h5>{{ item.replace('_', ' ') }}</h5>
-                            {% if category_data[item] is mapping %}
-                                <ul>
-                                {% for key, value in category_data[item].items() %}
-                                    <li><strong>{{ key.replace('_', ' ') }}:</strong> {{ value }}</li>
-                                {% endfor %}
-                                </ul>
-                            {% elif category_data[item] is iterable and category_data[item] is not string %}
-                                <ul>
-                                    {% for index in range(category_data[item] | length) %}
+                <button type="button" class="btn btn-info collapsible" style="margin-bottom: 10px">{{ category }} settings</button>
+                <div class="content">
+                    <h3>{{ category }}</h3>
+                    <ul id="{{ category }}">
+                    {% for item, itmcategory in settings %}
+                        {% if itmcategory == category %}
+                            <li>
+                                <h5>{{ item.replace('_', ' ') }}</h5>
+                                {% if category_data[item] is mapping %}
+                                        <ul>
+                                            <div id="dict_{{ item }}_holder">
+                                                {% for key, value in category_data[item].items() %}
+                                                    <li class="dict-item mb-3" id="dict|{{ key }}">
+                                                        <div class="d-flex align-items-center">
+                                                            <input type="text" class="form-control dict-name" id="dict|{{ item }}|key|{{ key }}" value="{{ key }}" disabled>
+                                                            <input type="text" class="form-control dict-value" id="dict|{{ item }}|value|{{ key }}|{{ value }}" value="{{ value }}">
+                                                            {% if category != "store" %}
+                                                                <button type="button" class="btn btn-danger ms-2 remove-button" onclick="deleteValue('dict|{{ item }}|key|{{ key }}')">Remove</button>
+                                                            {% endif %}
+                                                            <!-- <button type="button" class="btn btn-success ms-2 restore-button">Restore</button> -->
+                                                        </div>
+                                                    </li>
+                                                {% endfor %}
+                                            </div>
+                                            {% if category != "store" %}
+                                            <li class="dict-item mb-3">
+                                                <div class="d-flex align-items-center">
+                                                    <input type="text" class="form-control dict-name" id="dict|{{ item }}|key:new" placeholder="item name">
+                                                    <input type="text" class="form-control dict-value" id="dict|{{ item }}|value:new" placeholder="item value">
+                                                    <button type="button" class="btn btn-success ms-2 add-button" onclick="addDictItem('{{ item }}')">Add</button>
+                                                </div>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                {% elif category_data[item] is iterable and category_data[item] is not string %}
+                                    <ul>
+                                        <div id="list_{{ item }}_holder">
+                                            {% for index in range(category_data[item] | length) %}
+                                                <li class="dict-item mb-3" id="list|{{ item }}|{{ category_data[item][value] }}">
+                                                    <div class="d-flex align-items-center">
+                                                        <input type="text" class="form-control" id="list|{{ item }}|{{ category_data[item][value] }}|input" value="{{ category_data[item][index] }}">
+                                                        <button type="button" class="btn btn-danger ms-2 remove-button" onclick="deleteValue('list|{{ item[0] }}|{{ category_data[item][value] }}')">Remove</button>
+                                                        <!-- <button type="button" class="btn btn-success ms-2 restore-button">Restore</button> -->
+                                                    </div>
+                                                </li>
+                                            {% endfor %}
+                                        </div>
                                         <li class="dict-item mb-3">
                                             <div class="d-flex align-items-center">
-                                                <input type="text" class="form-control" id="{{ 'list|||' ~ item ~ '|||' ~ index }}" value="{{ category_data[item][index] }}">
-                                                <input type="hidden" id="{{ 'list|||' ~ item ~ '|||' ~ index ~ '|||original' }}" value="{{ category_data[item][index] }}">
-                                                <button type="button" class="btn btn-danger ms-2 remove-button">Remove</button>
-                                                <button type="button" class="btn btn-success ms-2 restore-button">Restore</button>
+                                                <input type="text" class="form-control" id="list|{{ item }}:new" placeholder="Add new item">
+                                                <button type="button" class="btn btn-success ms-2 add-button" onclick="addListItem('{{ item }}')">Add</button>
                                             </div>
                                         </li>
-                                    {% endfor %}
-                                    <li class="dict-item mb-3">
-                                        <div class="d-flex align-items-center">
-                                            <input type="text" class="form-control" id="{{ 'list|||' ~ item ~ '|||new|||' }}" placeholder="Add new item">
-                                            <button type="button" class="btn btn-success ms-2 add-button">Add</button>
+                                    </ul>
+                                {% elif category_data[item] is boolean %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" id="{{ item }}" type="checkbox" name="{{ item }}" {% if category_data[item] %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ item }}">{{ item.replace('_', ' ') }}</label>
+                                    </div>
+                                {% elif itmcategory == "nonedit" %}
+                                    {% if category_data[item] is boolean %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" id="{{ item }}" type="checkbox" name="{{ item }}" {% if category_data[item] %}checked{% endif %}>
+                                            <label class="form-check-label" for="{{ item }}">{{ item.replace('_', ' ') }}</label>
                                         </div>
-                                    </li>
-                                </ul>
-                            {% elif category_data[item] is boolean %}
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="{{ item }}" {% if category_data[item] %}checked{% endif %}>
-                                    <label class="form-check-label" for="{{ item }}">{{ item.replace('_', ' ') }}</label>
-                                </div>
-                            {% elif itmcategory == "nonedit" %}
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" id="{{ item }}:{{ category_data[item] }}" value="{{ category_data[item] }}" disabled>
-                                </div>
-                            {% else %}
-                                <div class="input-group mb-3">
-                                    <input
-                                        type="text"
-                                        class="form-control"
-                                        id="{{ item }}:{{ category_data[item] }}"
-                                        value="{{ category_data[item] }}"
-                                        data-original-value="{{ category_data[item] }}"
-                                    >
-                                </div>
-                            {% endif %}
-                        </li>
-                    {% endif %}
-                {% endfor %}
-                </ul>
+                                    {% else %}
+                                        <div class="input-group mb-3">
+                                            <input type="text" class="form-control" id="{{ item }}" value="{{ category_data[item] }}" readonly disabled>
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="input-group mb-3">
+                                        <input
+                                            type="text"
+                                            id="{{ item }}"
+                                            class="form-control"
+                                            data-type="other"
+                                            data-name="{{ item }}"
+                                            value="{{ category_data[item] }}"
+                                            data-original-value="{{ category_data[item] }}"
+                                        >
+                                    </div>
+                                {% endif %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    </ul>
+                </div>
+                <br>
             {% endfor %}
         </form>
+        <br>
     </div>
 
     <script src="{{ url_for('static', filename='guild.js') }}"></script>
+    <script>
+
+    </script>
 </body>
 </html>

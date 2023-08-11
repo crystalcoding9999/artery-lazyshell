@@ -10,7 +10,7 @@ class BotConfig:
                 self.__dict__.update(bot_config_data)
         except FileNotFoundError:
             # Default values in case the JSON file doesn't exist
-            self.bot_prefix = "dev+"
+            self.bot_prefix = "+"
             self.default_cash = 0
             self.cash_name = "eggs"
             self.iron_cash_name = "silver eggs"
@@ -52,6 +52,9 @@ class BotConfig:
             # Farms
             self.level_1_farm_min = 0
             self.level_1_farm_max = 5
+            self.level_1_silver_chance = 5
+            self.level_1_silver_double = 0
+            self.level_1_gold_chance = 0
             self.level_1_explore_min = -5
             self.level_1_explore_max = 5
             self.level_1_bargain_max = 100
@@ -59,6 +62,9 @@ class BotConfig:
             self.level_2_unlock_cost = 500
             self.level_2_farm_min = 1
             self.level_2_farm_max = 7
+            self.level_2_silver_chance = 10
+            self.level_2_silver_double = 15
+            self.level_2_gold_chance = 0
             self.level_2_explore_min = -3
             self.level_2_explore_max = 8
             self.level_2_bargain_max = 150
@@ -66,6 +72,9 @@ class BotConfig:
             self.level_3_unlock_cost = 2000
             self.level_3_farm_min = 6
             self.level_3_farm_max = 12
+            self.level_3_silver_chance = 15
+            self.level_3_silver_double = 20
+            self.level_3_gold_chance = 0
             self.level_3_explore_min = -1
             self.level_3_explore_max = 10
             self.level_3_bargain_max = 200
@@ -74,6 +83,7 @@ class BotConfig:
             self.level_4_farm_min = 9
             self.level_4_farm_max = 15
             self.level_4_silver_chance = 10
+            self.level_3_silver_double = 30
             self.level_4_gold_chance = 1
             self.level_4_explore_min = 3
             self.level_4_explore_max = 12
@@ -83,6 +93,7 @@ class BotConfig:
             self.level_5_farm_min = 14
             self.level_5_farm_max = 20
             self.level_5_silver_chance = 25
+            self.level_3_silver_double = 40
             self.level_5_gold_chance = 10
             self.level_5_explore_min = 5
             self.level_5_explore_max = 15
@@ -130,15 +141,19 @@ class BotConfig:
             }
 
             self.emojis = {
-                "eggy": "<:eggy:1121872437055869048>", "silver eggy": "<:silvereggy:1122255924669726800>",
-                "golden eggy": "<:goldeneggy:1121874261649399879>", "eggyolk": "<:eggyolk:1121874358730772600>",
-                "egg topper": "<:topper:1124027514742902915>", "delicate shovel": "<:shovel:1124049016183869490>",
-                "lucky drumstick": "<:drumstick:1124027535999635466>",
-                "golden chicken": "<:chicky:1124027639838027867>",
-                "binoculars": "<:binoculars:1124027615972425901>", "farm": "<:farm:1124027661694533723>",
-                "eggcellent statue": "<:eggystatue:1124040541236113539>",
-                "golden shovel": "<:goldenshovel:1124048992511197244>",
-                "jackpot": "<:jackpot:1126842458651758623>"
+                "eggy": "<:eggy:1139539060516470976>",
+                "silver eggy": "<:silvereggy:1139539079067873353>",
+                "golden eggy": "<:goldeneggy:1139539073963397171>",
+                "eggyolk": "<:eggyolk:1139539062651363338>",
+                "egg topper": "<:topper:1139539081609629696>",
+                "delicate shovel": "<:shovel:1139539078132543578>",
+                "lucky drumstick": "<:drumstick:1139539088328900709>",
+                "golden chicken": "<:goldenchicken:1139539071442620487>",
+                "binoculars": "<:binoculars:1139539086114304020>",
+                "farm": "<:farm:1139539068376584192>",
+                "eggcellent statue": "<:eggystatue:1139539064912089148>",
+                "golden shovel": "<:goldenshovel:1139539076538716220>",
+                "jackpot": "<:jackpot:1139539083509637232>"
             }
 
             self.guilds = {

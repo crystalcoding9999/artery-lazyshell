@@ -1,9 +1,3 @@
-import dashboard
-from settings import settings, BotConfig
-import os
+from api.database import *
 
-if os.path.exists('./bot_config.json'):
-    os.remove('./bot_config.json')
-    settings = BotConfig()
-
-dashboard.run(True)
+print(buy_item(0, "farm_4"))

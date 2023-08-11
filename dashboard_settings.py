@@ -6,8 +6,8 @@ CLIENT_ID = 1121487989403558049
 CLIENT_SECRET = "9N9jmnp8sp8ECz2srlk2qsZUFKgvT3oT"
 
 settings_type_names = ['nonedit', 'server', 'boosts', 'guilds', 'harvest command', 'hunt command', 'dupe command',
-                       'bargain command', 'dig command', 'explore command', 'level 1 farm', 'level 2 farm',
-                       "level 3 farm", "level 4 farm", "level 5 farm", 'store']
+                       'bargain command', 'dig command', 'explore command', 'store', 'level 1 farm', 'level 2 farm',
+                       "level 3 farm", "level 4 farm", "level 5 farm"]
 
 subcategory_mapping = {
 
@@ -43,23 +43,33 @@ settings_types = {
     'level_1_farm_max': "level 1 farm",
     'level_1_explore_min': "level 1 farm",
     'level_1_explore_max': "level 1 farm",
+    'level_1_silver_chance': "level 1 farm",
+    'level_1_silver_double': "level 1 farm",
+    'level_1_gold_chance': "level 1 farm",
     'level_1_bargain_max': "level 1 farm",
     'level_2_unlock_cost': "level 2 farm",
     'level_2_farm_min': "level 2 farm",
     'level_2_farm_max': "level 2 farm",
     'level_2_explore_min': "level 2 farm",
     'level_2_explore_max': "level 2 farm",
+    'level_2_silver_chance': "level 2 farm",
+    'level_2_silver_double': "level 2 farm",
+    'level_2_gold_chance': "level 2 farm",
     'level_2_bargain_max': "level 2 farm",
     'level_3_unlock_cost': "level 3 farm",
     'level_3_farm_min': "level 3 farm",
     'level_3_farm_max': "level 3 farm",
     'level_3_explore_min': "level 3 farm",
     'level_3_explore_max': "level 3 farm",
+    'level_3_silver_chance': "level 3 farm",
+    'level_3_silver_double': "level 3 farm",
+    'level_3_gold_chance': "level 3 farm",
     'level_3_bargain_max': "level 3 farm",
     'level_4_unlock_cost': "level 4 farm",
     'level_4_farm_min': "level 4 farm",
     'level_4_farm_max': "level 4 farm",
     'level_4_silver_chance': "level 4 farm",
+    'level_4_silver_double': "level 4 farm",
     'level_4_gold_chance': "level 4 farm",
     'level_4_explore_min': "level 4 farm",
     'level_4_explore_max': "level 4 farm",
@@ -68,6 +78,7 @@ settings_types = {
     'level_5_farm_min': "level 5 farm",
     'level_5_farm_max': "level 5 farm",
     'level_5_silver_chance': "level 5 farm",
+    'level_5_silver_double': "level 5 farm",
     'level_5_gold_chance': "level 5 farm",
     'level_5_explore_min': "level 5 farm",
     'level_5_explore_max': "level 5 farm",
